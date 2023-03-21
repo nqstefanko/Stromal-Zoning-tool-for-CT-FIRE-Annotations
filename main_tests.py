@@ -12,7 +12,6 @@ import shapely.geometry as geo # Polygon, Point
 from ctfire_output_helper import CTFIREOutputHelper
 from annotation_helper import AnnotationHelper
 from test_export import *
-from test_export import _draw_annotations
 
 # #CROPPED_IMG DATA
 # TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
@@ -30,12 +29,38 @@ MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_
 
 annotation_helper = AnnotationHelper()
 ctf_output = CTFIREOutputHelper(MAT_FILEPATH)
+draw_helper = DrawingHelper(ctf_output, annotation_helper, TIF_FILEPATH)
 anno_info, points, g_polygons = annotation_helper.get_annotations(EXPORTED_ANNOTATION_FILEPATH)
-bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
+
+
+# {0: 1262, 1: 1064, 2: 1358, 3: 2935}
 
 ############################## NEW TEST - Save Overlay Annotations on Top #######################################################################################
-# save_final_overlay(TIF_FILEPATH, annotation_helper)
+# draw_helper.save_final_overlay()
 ############################################################################################################################################
+# bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper, 'bucketed.npy', False)
+bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
+print(bucketed_fibers.shape)
+labeled_fibers = bucketed_fibers.min(axis=1)
+unique, counts = np.unique(labeled_fibers, return_counts=True)
+print(dict(zip(unique, counts)))
+print(bucketed_fibers.shape)
+print(get_signal_density_overall(ctf_output, annotation_helper, bucketed_fibers))
+
+
+np.save('bucketed.npy', bucketed_fibers.astype(np.int32))
+# with open('bucketed.npy', 'rb') as f:
+#      bucketed_fibers = np.load(f)
+for i in range(4):
+    draw_helper.reset(TIF_FILEPATH)
+    draw_helper.draw_fibers_per_zone(bucketed_fibers, i)
+    final_path = os.path.join(sys.path[0], 'bong_overlayed.tif')
+    draw_helper.rgbimg.save(final_path)
+    plot_helper = PlottingHelper(ctf_output, annotation_helper, final_path)
+    plot_helper._plot_zones([0, 50, 150], to_plot=[3-i])
+    plot_helper.show_plot()
+    
+    #1 is mid, 2 is epith, 3 is interior
 
 ############################## NEW TEST - Save Overlay Annotations on Bottom #######################################################################################
 # save_final_overlay(TIF_FILEPATH, annotation_helper, on_top='F')
@@ -46,7 +71,8 @@ bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
 ############################################################################################################################################
 
 ############################# NEW TEST - Plot Overlay Annotations on Top ######################################################################################################
-# plot_final_overlay(TIF_FILEPATH, annotation_helper)
+# plot_helper.plot_final_overlay()
+# plot_helper.show_plot()
 ###########################################################################################################################################
 
 ############################## NEW TEST - Plot Overlay Annotations on Bottom ######################################################################################################
@@ -58,8 +84,8 @@ bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
 ############################################################################################################################################
 
 ############################## NEW TEST - Plot stromal Zones ######################################################################################################
-for i in range(4):
-    plot_specific_zone(TIF_FILEPATH, ctf_output, bucketed_fibers, annotation_helper, bucket=i)
+# for i in range(1):
+#     plot_fibers_per_zone(TIF_FILEPATH, ctf_output, bucketed_fibers, bucket=i)
 # ASK HOW TO CATEGORIZE FIBERS WITHIN ANNOTATIONS / CANCERES/ ATYPIA / BENIGN
 # Are the any that include ones that overlap, 
 ############################################################################################################################################

@@ -22,9 +22,18 @@ class CTFIREOutputHelper():
     def get_curvelet_params(self):
         return self.ctfire_dict['cP']
 
+    def get_fiber_lengths_thresholded(self):
+        length_threshold = self.get_fiber_len_threshold()
+        length_of_fibers = self.ctfire_dict['data']['M'][0][0]['L'][0][0].flatten()
+
+        lengths_greater_than_threshold = np.where(length_of_fibers > length_threshold, length_of_fibers, 0)
+        lengths_greater_than_threshold = lengths_greater_than_threshold[lengths_greater_than_threshold != 0]
+
+        self.fiber_lengths = lengths_greater_than_threshold
+        return self.fiber_lengths
+    
     def get_fiber_lengths(self):
-        if(self.fiber_lengths is None):
-            self.fiber_lengths = self.ctfire_dict['data']['M'][0][0]['L'][0][0].flatten()
+        self.fiber_lengths = self.ctfire_dict['data']['M'][0][0]['L'][0][0].flatten()
         return self.fiber_lengths
 
     def get_fiber_len_threshold(self):
@@ -107,7 +116,7 @@ class CTFIREOutputHelper():
 
     def get_fiber_widths(self):
         length_threshold = self.get_fiber_len_threshold()
-        length_of_fibers = self.get_fiber_lengths()
+        length_of_fibers = self.get_fiber_lengths_thresholded()
 
         indexes_of_lengths_greater_than_threshold = np.where(length_of_fibers > length_threshold)[0]
         lengths_greater_than_threshold = np.where(length_of_fibers > length_threshold, length_of_fibers, 0)

@@ -24,6 +24,8 @@ from ctfire_output_helper import CTFIREOutputHelper
 from annotation_helper import AnnotationHelper
 from shapely.plotting import plot_polygon
 
+# https://stackoverflow.com/questions/57657419/how-to-draw-a-figure-in-specific-pixel-size-with-matplotlib
+
 # #CROPPED_IMG DATA
 # TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout\ctFIREout_2B_D9_crop2.mat"
@@ -37,12 +39,6 @@ from shapely.plotting import plot_polygon
 EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
 TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
 MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
-
-annotation_helper = AnnotationHelper()
-ctf_output = CTFIREOutputHelper(MAT_FILEPATH)
-
-def rgb_to_hex(rgb):
-    return '#%02x%02x%02x' % rgb
 
 def print_function_dec(func):
     """This function is written to help write out time of functions and get exceptions"""
@@ -59,90 +55,152 @@ def print_function_dec(func):
             traceback.print_exc()
     return wrapper
 
-def convert_grayscale_tif_to_color(image_url):
-    image = Image.open(image_url, 'r').convert('RGBA')
-    rgbimg = Image.new("RGBA", image.size)
-    rgbimg.paste(image)
-    return rgbimg
+class DrawingHelper():
+    def __init__(self, ctf_helper=None, anno_helper=None, tif_file=None) -> None:
+        self.annotation_helper_obj = anno_helper 
+        self.ctf_output_obj  = ctf_helper
+        self.tif_file = tif_file
+        self.rgbimg =  self._convert_grayscale_tif_to_color()
+        self.draw_image = ImageDraw.Draw(self.rgbimg)
 
-def _draw_annotations(annotation_helper_obj, draw_img, final_path_to_save=None):
-    font = ImageFont.truetype("arial.ttf", 100)
-    for i, poly in enumerate(annotation_helper_obj.geo_polygons):
-        x, y = poly.exterior.xy
-        flat_points2 = np.stack((x, y), axis=1).flatten()
-        draw_img.line(flat_points2.astype(np.float32), width=55, fill=tuple(annotation_helper_obj.annotation_info[i]['color']), joint='curve')
+    def _convert_grayscale_tif_to_color(self):
+        image = Image.open(self.tif_file, 'r').convert('RGBA')
+        rgbimg = Image.new("RGBA", image.size)
+        rgbimg.paste(image)
+        return rgbimg
 
-    for i, points in enumerate(annotation_helper_obj.points): # Separate so it goes over
-        draw_img.text([points[0][0], points[0][1]], f"Ind: {i}", font=font)
+    def _draw_annotations(self, final_path_to_save=None):
+        font = ImageFont.truetype("arial.ttf", 100)
+        for i, poly in enumerate(self.annotation_helper_obj.geo_polygons):
+            x, y = poly.exterior.xy
+            flat_points2 = np.stack((x, y), axis=1).flatten()
+            self.draw_image.line(flat_points2.astype(np.float32), width=55, fill=tuple(self.annotation_helper_obj.annotation_info[i]['color']), joint='curve')
 
-    if(final_path_to_save):
-        final_path = os.path.join(sys.path[0], final_path_to_save)
-        draw_img._image.save(final_path)
+        for i, points in enumerate(self.annotation_helper_obj.points): # Separate so it goes over
+            self.draw_image.text([points[0][0], points[0][1]], f"Ind: {i}", font=font)
 
-def _plot_annotations(ax, annotation_helper_obj, img_height):
-    for i, original_annotation_poly in enumerate(annotation_helper_obj.geo_polygons):
-        x, y = original_annotation_poly.exterior.xy
-        
-        # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
-        y_points = np.abs(np.array(y) - img_height) 
-        stacked = np.column_stack((x, y_points))
-        fixed_y_annotation_poly = geo.Polygon(stacked)
-        plot_polygon(fixed_y_annotation_poly, ax, add_points = False, fill=False, linewidth = 2, alpha=1, 
-                color=rgb_to_hex(tuple(annotation_helper_obj.annotation_info[i]['color'])))
+        if(final_path_to_save):
+            final_path = os.path.join(sys.path[0], final_path_to_save)
+            self.draw_image._image.save(final_path)
 
-def _plot_zones(ax, annotation_helper_obj, zones, img_dimensions=(3700, 3700)):
-    colors = ['orange', 'green', 'magenta', 'red']
-    list_of_union_zones =  annotation_helper_obj.get_final_zones_for_plotting(zones, img_dimensions)
-    for i, final_union_zone_polygon in enumerate(list_of_union_zones):
-        plot_polygon(final_union_zone_polygon, ax, add_points = False, fill=True, linewidth = 2, alpha=1, color=colors[i])
-    return list_of_union_zones
-
-@print_function_dec
-def plot_final_overlay(tif_filepath, annotation_helper_obj=None, on_top='A'):
-    verts = ctf_output.get_fiber_verticies()
-    img = plt.imread(tif_filepath)
-    img_width = img.shape[0]
-    img_height = img.shape[1]
-    img_dims = (img_width, img_height)
-    
-    fig, ax = plt.subplots()
-    im = ax.imshow(img, cmap='gray', extent=[0, img_width+10, 0, img_height+10])
-
-    # if(annotation_helper_obj and on_top != 'A'):
-        # _plot_annotations(ax, annotation_helper_obj, img_height)
-
-    _plot_zones(ax, annotation_helper_obj, [0, 50, 150], img_dims)
-    
-    # for i in range(len(verts)):
-    #     x_points = verts[i][:, 0]
-    #     y_points = np.abs(verts[i][:, 1].astype('int16') - img_height)
-    #     ax.plot(x_points, y_points, linestyle="-")
-
-    # if(annotation_helper_obj and on_top == 'A'):
-    #     _plot_annotations(ax, annotation_helper_obj, img_height)
-
-    plt.show()
-    plt.close()
-
-@print_function_dec
-def save_final_overlay(tif_filepath, annotation_helper_obj=None, on_top='A', final_path_to_save='bong_overlayed.tif'):
-    verts = ctf_output.get_fiber_verticies()
-    rgbimg = convert_grayscale_tif_to_color(tif_filepath)
-    draw = ImageDraw.Draw(rgbimg)
-
-    if(annotation_helper_obj and on_top != 'A'):
-        _draw_annotations(annotation_helper_obj, draw)
-
-    # to_add = 2000
-    for i in range(len(verts)):
+    def draw_fibers(self):
+        verts = ctf_output.get_fiber_verticies()
+        widths = ctf_output.get_fiber_widths()
+        for i in range(len(verts)):
         # to_add:to_add+5 - print(i, ctf_output.centeroidnp(verts[i + to_add][:, 0], verts[i + to_add][:, 1]))
-        draw.line(verts[i].flatten().astype(np.float32), width=10, fill=tuple(np.random.choice(range(256), size=3)), joint="curve")
+            self.draw_image.line(verts[i].flatten().astype(np.float32), width=int(round(widths[i])), fill=tuple(np.random.choice(range(256), size=3)), joint="curve")
+    
+    @print_function_dec
+    def save_final_overlay(self, on_top='A', final_path_to_save='bong_overlayed.tif'):
+        if(on_top == 'A'):
+            self.draw_fibers()
+            self._draw_annotations()
+        else:
+            self._draw_annotations()
+            self.draw_fibers()
+        final_path = os.path.join(sys.path[0], final_path_to_save)
+        self.rgbimg.save(final_path)
+        return final_path
+ 
+    @print_function_dec
+    def draw_fibers_per_zone(self, bucketed_fibers, bucket = 0):
+        verts = self.ctf_output_obj.get_fiber_verticies()
+        widths = self.ctf_output_obj.get_fiber_widths()
+        
+        labeled_fibers = bucketed_fibers.min(axis=1)
+        indexes_to_plot = np.where(labeled_fibers == bucket)[0]
+        for i in indexes_to_plot:
+            self.draw_image.line(verts[i].flatten().astype(np.float32), width=int(round(widths[i])), fill=tuple(np.random.choice(range(256), size=3)), joint="curve")
 
-    if (annotation_helper_obj and on_top == 'A'):
-        _draw_annotations(annotation_helper_obj, draw)
+    @print_function_dec
+    def reset(self, new_tif):
+        self.new_tif = new_tif
+        self.rgbimg =  self._convert_grayscale_tif_to_color()
+        self.draw_image = ImageDraw.Draw(self.rgbimg)
 
-    final_path = os.path.join(sys.path[0], final_path_to_save)
-    rgbimg.save(final_path)
+class PlottingHelper():
+    def __init__(self, ctf_helper=None, anno_helper=None, tif_file=None) -> None:
+        self.annotation_helper_obj = anno_helper 
+        self.ctf_output_obj  = ctf_helper
+        fig, ax = plt.subplots()
+        self.fig = fig
+        self.ax = ax
+        self.tif_file = tif_file
+        if(tif_file):
+            self.set_img(tif_file)
+
+    def set_img(self, tif_file):
+        self.img = plt.imread(tif_file)
+        img_width = self.img.shape[0]
+        img_height = self.img.shape[1]
+        self.img_dims = (img_width, img_height) 
+        im = self.ax.imshow(self.img, cmap='gray', extent=[0, img_width+10, 0, img_height+10])
+        
+    def _rgb_to_hex(self, rgb):
+        return '#%02x%02x%02x' % rgb
+
+    def _plot_annotations(self, img_height):
+        for i, original_annotation_poly in enumerate(self.annotation_helper_obj.geo_polygons):
+            x, y = original_annotation_poly.exterior.xy
+            
+            # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
+            y_points = np.abs(np.array(y) - img_height) 
+            stacked = np.column_stack((x, y_points))
+            fixed_y_annotation_poly = geo.Polygon(stacked)
+            plot_polygon(fixed_y_annotation_poly, self.ax, add_points = False, fill=False, linewidth = 2, alpha=1, 
+                    color=self._rgb_to_hex(tuple(self.annotation_helper_obj.annotation_info[i]['color'])))
+
+    def _plot_zones(self, zones, img_dimensions=(3700, 3700), to_plot=[0, 1, 2, 3]):
+        colors = ['orange', 'green', 'magenta', 'red']
+        list_of_union_zones =  list(reversed(self.annotation_helper_obj.get_final_zones_for_plotting(zones, self.ax, img_dimensions)))
+        
+        for i in range(len(list_of_union_zones)):
+            # 0 is Stromal, 1 is mid, 2 is epith, 3 is annotation itself
+            if(i in to_plot):
+                final_union_zone_polygon = list_of_union_zones[i]
+                print(i, f'{final_union_zone_polygon.area:,}', colors[i])
+                plot_polygon(final_union_zone_polygon, self.ax, add_points = False, fill=True, linewidth = 2, alpha=.15, color=colors[i])
+        return list_of_union_zones
+
+    def _plot_the_fibers(self, img_height=3700):
+        verts = ctf_output.get_fiber_verticies()
+        verts = verts[2000:2010]
+        for i in range(len(verts)):
+            x_points = verts[i][:, 0]
+            y_points = np.abs(verts[i][:, 1].astype('int16') - img_height)
+            self.ax.plot(x_points, y_points, linestyle="-")
+    
+    def show_plot(self):
+        plt.show()
+        plt.close() 
+
+    @print_function_dec
+    def plot_final_overlay(self, on_top='A', save_plot_as_img=False):        
+        if(self.annotation_helper_obj and on_top != 'A'):
+            self._plot_annotations(img_height)
+
+        self._plot_the_fibers(img_height)
+
+        if(self.annotation_helper_obj and on_top == 'A'):
+            self._plot_annotations(img_height)
+        
+        if(save_plot_as_img):
+            self.ax.set_frame_on(False)
+            self.ax.axes.get_xaxis().set_visible(False)
+            self.ax.axes.get_yaxis().set_visible(False)
+            plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, hspace = 0, wspace = 0)
+            plt.margins(0,0)
+            plt.tight_layout()
+            plt.savefig('titties.tif', bbox_inches='tight',  pad_inches = 0, dpi=300)
+
+    @print_function_dec
+    def reset(self, new_tif=None):
+        fig, ax = plt.subplots()
+        self.fig = fig
+        self.ax = ax
+        if new_tif is not None:
+            self.tif_file = new_tif
+            self.set_img(new_tif)
 
 @print_function_dec
 def bucket_the_fibers(ctf_helper_obj,  annotation_helper_obj, buckets=np.array([0, 50, 150])):
@@ -150,7 +208,7 @@ def bucket_the_fibers(ctf_helper_obj,  annotation_helper_obj, buckets=np.array([
     # Return Arr (len fibers, len anno) - For each fibers, we have an array for each annotation with represented bucket.
     fibers = ctf_helper_obj.get_fiber_verticies()
     centroids = ctf_helper_obj.get_centroids()
-    
+
     shape = (len(fibers), len(annotation_helper_obj.geo_polygons))
     fibers_bucketed = np.ones(shape, dtype=int)
     for i, centroid in enumerate(centroids):
@@ -161,54 +219,17 @@ def bucket_the_fibers(ctf_helper_obj,  annotation_helper_obj, buckets=np.array([
 
         poly_distances = np.array(range(len(annotation_helper_obj.geo_polygons)))
         for j, g_poly in enumerate(annotation_helper_obj.geo_polygons):
-                poly_distances[j] = g_poly.exterior.distance(centroid_point)
-                if (g_poly.contains(centroid_point)):  # Could use fiber_linestring but much more restrictive
-                    poly_distances[j] = -1
+            poly_distances[j] = g_poly.exterior.distance(centroid_point)
+            
+            if (g_poly.contains(centroid_point) or g_poly.contains(fiber_linestring)):  # Could use fiber_linestring but much more restrictive
+                poly_distances[j] = -1
 
-                if(fiber_linestring.crosses(g_poly)):
-                    poly_distances[j] = 1
+            if(fiber_linestring.crosses(g_poly)):
+                poly_distances[j] = 1
         bucket_fibers = np.digitize(poly_distances, buckets, right=True).astype(int)
         fibers_bucketed[i] = bucket_fibers
     return fibers_bucketed
     # return fibers_bucketed[0:len(centroids)]
-
-@print_function_dec
-def plot_specific_zone(tif_filepath, ctf_output_obj, bucketed_fibers, annotation_helper_obj=None, on_top='A', bucket = 0):
-    verts = ctf_output_obj.get_fiber_verticies()
-    img = plt.imread(tif_filepath)
-    img_width = img.shape[0]
-    img_height = img.shape[1]
-
-    fig, ax = plt.subplots()
-    im = ax.imshow(img, cmap='gray', extent=[0, img_width+10, 0, img_height+10])
-
-    if(annotation_helper_obj and on_top != 'A'):
-        _plot_annotations(ax, annotation_helper_obj, img_height)
-        
-    labeled_fibers = bucketed_fibers.min(axis=1)
-    indexes_to_plot = np.where(labeled_fibers == bucket)[0]
-    for i in indexes_to_plot:
-        x_points = verts[i][:, 0]
-        y_points = np.abs(verts[i][:, 1].astype('int16') - img_height)
-        ax.plot(x_points, y_points, linestyle="-")
-
-    if(annotation_helper_obj and on_top == 'A'):
-        _plot_annotations(ax, annotation_helper_obj, img_height)
-
-    plt.show()
-    plt.close()
-
-def get_annotation_areas(annotation_helper_obj, img_dimensions=[3700, 3700]):
-    annotation_area = 0
-    total_area = img_dimensions[0] * img_dimensions[1]
-    for g_poly in annotation_helper_obj.geo_polygons:
-        annotation_area += g_poly.area
-        
-    stromal_area = img_dimensions[0] * img_dimensions[1] - annotation_area
-    stromal_percentage = stromal_area / total_area
-    annotation_percentage = annotation_area / total_area
-
-    return total_area, stromal_area, annotation_area, stromal_percentage, annotation_percentage
 
 @print_function_dec
 def get_signal_density_per_annotation(annotation_helper_obj, bucketed_fibers = None, zones = np.array([50, 150])):
@@ -216,7 +237,7 @@ def get_signal_density_per_annotation(annotation_helper_obj, bucketed_fibers = N
     final_areas = {0:0, 1:0, 2:0}
     final_counts = {0:0, 1:0, 2:0, 3:0}
 
-    lengths = ctf_output.get_fiber_lengths()
+    lengths = ctf_output.get_fiber_lengths_thresholded()
     widths = ctf_output.get_fiber_widths()
     
     for i, poly in enumerate(annotation_helper_obj.geo_polygons):
@@ -243,14 +264,107 @@ def get_signal_density_per_annotation(annotation_helper_obj, bucketed_fibers = N
     print("Mid:", final_counts[2] / final_areas[2])
     print("Stromal:", final_counts[3] / stromal)
 
-anno_info, points, g_polygons = annotation_helper.get_annotations(EXPORTED_ANNOTATION_FILEPATH)
-plot_final_overlay(TIF_FILEPATH, annotation_helper)
+def get_signal_density_overall(ctf_output_obj, annotation_helper_obj, bucketed_fibers = None, buckets = None, zones = np.array([50, 150])):
+    # This is the current 4 zones bro
+    lengths = ctf_output_obj.get_fiber_lengths_thresholded()
+    widths = ctf_output_obj.get_fiber_widths()
+    
+    labeled_fibers = bucketed_fibers.min(axis=1)
+    print("SHAPES:", labeled_fibers.shape, lengths.shape, widths.shape)
+    final_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+    actual_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+    for i in range(len(bucketed_fibers)):
+        final_counts[labeled_fibers[i]] +=  lengths[i] * widths[i]
+        actual_counts[labeled_fibers[i]] +=1
+    
+    final_densities = []
+    final_union_of_zones = annotation_helper_obj.get_final_zones([0, 50, 150]) 
+    for i, zone in enumerate(reversed(final_union_of_zones)):
+        final_densities.append(final_counts[i] / zone.area)
+
+    print(actual_counts)
+    return final_densities
+
+if __name__ == '__main__':
+    ctf_output = CTFIREOutputHelper(MAT_FILEPATH)
+
+    annotation_helper = AnnotationHelper()
+    anno_info, points, g_polygons = annotation_helper.get_annotations(EXPORTED_ANNOTATION_FILEPATH)
+
+    # with open('bucketed.npy', 'rb') as f:
+    #     bucketed_fibers = np.load(f)
+    bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
+
+    print(get_signal_density_overall(ctf_output, bucketed_fibers))
+
+
+# print(get_signal_density_overall(ctf_output, bucketed_fibers))
+
+# final_union_of_zones = annotation_helper.get_final_zones([0, 50, 150])
+# [0.16245275053715674, 0.22054797976935003, 0.36467417044606637, 0.14896299113178588]
+
+# epith_zone = annotation_helper.zoned_polys[26][1]
+# medium_zone = annotation_helper.zoned_polys[26][2]
+# # plot_fibers_per_zone(TIF_FILEPATH, ctf_output, bucketed_fibers)
+
+
+# lengths = ctf_output.get_fiber_lengths()
+# widths = ctf_output.get_fiber_widths()
+
+# total, stromal, anno, stromal_percentage, annotation_percentage = get_annotation_areas(annotation_helper)
+# poly = annotation_helper.geo_polygons[26]
+# buckets_for_26th_anno = fiber_per_annotation = bucketed_fibers[:, 26:].flatten()
+# final_counts = {0:0, 1:0, 2:0, 3:0}
+# final_counts2 = {0:0, 1:0, 2:0, 3:0}
+
+
+# for i, bucket in enumerate(buckets_for_26th_anno):
+#     final_counts[bucket] += widths[i] * lengths[i]
+#     final_counts2[bucket] +=1
+
+# print(final_counts)
+# print(final_counts2)
+# cprint(f"Non-Stromal Area: {poly.area}", 'cyan')
+# cprint(f"Eptih Area: {epith_zone.area}", 'green')
+# cprint(f"Mid Area: {medium_zone.area}", 'cyan')
+# cprint(f"Stromal Area: {stromal}", 'green')
+
+# print("Non-Stromal:", final_counts[0] / poly.area)
+# print("Epithelial:", final_counts[1] / epith_zone.area )
+# print("Mid:", final_counts[2] / medium_zone.area)
+# print("Stromal:", final_counts[3] / stromal)
 
 
 
+# @print_function_dec
+# def plot_fibers_per_zone(tif_filepath, ctf_output_obj, bucketed_fibers, annotation_helper_obj=None, on_top='A', bucket = 0, ax = None):
+#     verts = ctf_output_obj.get_fiber_verticies()
+#     img = plt.imread(tif_filepath)
+#     img_width = img.shape[0]
+#     img_height = img.shape[1]
 
+#     if ax is None:
+#         fig, ax = plt.subplots()
+    
+#     im = ax.imshow(img, cmap='gray', extent=[0, img_width+10, 0, img_height+10])
 
+#     if(annotation_helper_obj and on_top != 'A'):
+#         _plot_annotations(ax, annotation_helper_obj, img_height)
+        
+#     labeled_fibers = bucketed_fibers.min(axis=1)
+#     indexes_to_plot = np.where(labeled_fibers == bucket)[0]
+#     for i in indexes_to_plot:
+#         x_points = verts[i][:, 0]
+#         y_points = np.abs(verts[i][:, 1].astype('int16') - img_height)
+#         ax.plot(x_points, y_points, linestyle="-", linewidth=x * 72 / fig.dpi)
 
+#     _plot_zones(ax, annotation_helper, [0, 50, 150])
+
+#     if(annotation_helper_obj and on_top == 'A'):
+#         _plot_annotations(ax, annotation_helper_obj, img_height)
+
+#     plt.show()
+#     plt.close()
 
 
 
@@ -267,7 +381,6 @@ plot_final_overlay(TIF_FILEPATH, annotation_helper)
 # plot_polygon(full_union_poly, ax, add_points = False, fill=True, linewidth = 2, alpha=1, 
 #                 color=rgb_to_hex(tuple(annotation_helper_obj.annotation_info[i]['color'])))
 
-# bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
 # get_signal_density_per_annotation(annotation_helper, bucketed_fibers)
 
 # total, stromal, anno, stromal_percentage, annotation_percentage = get_annotation_areas(annotation_helper)

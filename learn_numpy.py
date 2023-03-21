@@ -44,15 +44,16 @@ cprint(f"Labeled Fibers: {labeled_fibers}", 'green')
 sum_values = np.array(range(4))
 cprint(f"sum_values: {sum_values}", 'cyan')
 final_counts = {0:0, 1:0, 2:0, 3:0}
-# for i, fiber in enumerate(fibers_simulation):
-#     final_counts[labeled_fibers[i]] += len(fiber)
-# print(np.sum(fibers_simulation[sum_values], axis=0))
-
-fiber_per_annotation = fiber_buckets_simulation[:, 2:].flatten()
-print(fiber_per_annotation)
-for i, bucket in enumerate(fiber_per_annotation):
-    final_counts[bucket] += widths_simulation[i] * length_simulation[i]
+for i, fiber in enumerate(fibers_simulation):
+    final_counts[labeled_fibers[i]] += 1
 print(final_counts)
+print(np.sum(fibers_simulation[sum_values], axis=0))
+
+# fiber_per_annotation = fiber_buckets_simulation[:, 2:].flatten()
+# print(fiber_per_annotation)
+# for i, bucket in enumerate(fiber_per_annotation):
+#     final_counts[bucket] += widths_simulation[i] * length_simulation[i]
+# print(final_counts)
 # print(np.where(labeled_fibers == 0))
 
 # temp = np.array((4,2))

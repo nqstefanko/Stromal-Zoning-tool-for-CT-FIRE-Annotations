@@ -14,8 +14,9 @@ from annotation_helper import AnnotationHelper
 from test_export import *
 
 # #CROPPED_IMG DATA
-# TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
-# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout\ctFIREout_2B_D9_crop2.mat"
+TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
+MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout\ctFIREout_2B_D9_crop2.mat"
+EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.geojson"
 
 #16 DENOISED DATA 16
 # EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-016_10x10_1_Nuclei_Collagen - Denoised.geojson")
@@ -23,45 +24,24 @@ from test_export import *
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\ctFIREout\ctFIREout_DCIS-016_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
 # #18 DENOISED DATA 18
-EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
-TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
-MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
+# EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
+# TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
+# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
-annotation_helper = AnnotationHelper()
-ctf_output = CTFIREOutputHelper(MAT_FILEPATH)
-draw_helper = DrawingHelper(ctf_output, annotation_helper, TIF_FILEPATH)
-anno_info, points, g_polygons = annotation_helper.get_annotations(EXPORTED_ANNOTATION_FILEPATH)
+with Image.open(TIF_FILEPATH) as img:
+    IMG_DIMS = img.size
+
+CTF_OUTPUT = CTFIREOutputHelper(MAT_FILEPATH)
+ANNOTATION_HELPER = AnnotationHelper(IMG_DIMS)
+
+PLOT_HELPER = PlottingHelper(CTF_OUTPUT, ANNOTATION_HELPER, tif_file=TIF_FILEPATH)
+DRAW_HELPER = DrawingHelper(CTF_OUTPUT, ANNOTATION_HELPER, TIF_FILEPATH)
+anno_info, points, g_polygons = ANNOTATION_HELPER.get_annotations(EXPORTED_ANNOTATION_FILEPATH)
 
 
-# {0: 1262, 1: 1064, 2: 1358, 3: 2935}
 
-############################## NEW TEST - Save Overlay Annotations on Top #######################################################################################
-# draw_helper.save_final_overlay()
 ############################################################################################################################################
-# bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper, 'bucketed.npy', False)
-bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
-print(bucketed_fibers.shape)
-labeled_fibers = bucketed_fibers.min(axis=1)
-unique, counts = np.unique(labeled_fibers, return_counts=True)
-print(dict(zip(unique, counts)))
-print(bucketed_fibers.shape)
-print(get_signal_density_overall(ctf_output, annotation_helper, bucketed_fibers))
-
-
-np.save('bucketed.npy', bucketed_fibers.astype(np.int32))
-# with open('bucketed.npy', 'rb') as f:
-#      bucketed_fibers = np.load(f)
-for i in range(4):
-    draw_helper.reset(TIF_FILEPATH)
-    draw_helper.draw_fibers_per_zone(bucketed_fibers, i)
-    final_path = os.path.join(sys.path[0], 'bong_overlayed.tif')
-    draw_helper.rgbimg.save(final_path)
-    plot_helper = PlottingHelper(ctf_output, annotation_helper, final_path)
-    plot_helper._plot_zones([0, 50, 150], to_plot=[3-i])
-    plot_helper.show_plot()
-    
-    #1 is mid, 2 is epith, 3 is interior
-
+# 
 ############################## NEW TEST - Save Overlay Annotations on Bottom #######################################################################################
 # save_final_overlay(TIF_FILEPATH, annotation_helper, on_top='F')
 ############################################################################################################################################
@@ -172,6 +152,55 @@ for i in range(4):
 
 
 
+# bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper, 'bucketed.npy', False)
+# # bucketed_fibers = bucket_the_fibers(ctf_output, annotation_helper)
+# # print(bucketed_fibers.shape)
+# # labeled_fibers = bucketed_fibers.min(axis=1)
+# # unique, counts = np.unique(labeled_fibers, return_counts=True)
+# # print(dict(zip(unique, counts)))
+# # print(bucketed_fibers.shape)
+
+
+# # np.save('bucketed.npy', bucketed_fibers.astype(np.int32))
+# with open('bucketed.npy', 'rb') as f:
+#      bucketed_fibers = np.load(f)
+# # labeled_fibers = bucketed_fibers.min(axis=1)
+# # unique, counts = np.unique(labeled_fibers, return_counts=True)
+# # print(dict(zip(unique, counts)))
+# # print(bucketed_fibers.shape)
+
+# values = ["DCIS", "Epithelial", "Mid-Stromal", "Other Stromal"]
+
+# # print("SIGNAL DENSITIES")
+# # sig_dens = get_signal_density_overall(ctf_output, annotation_helper, bucketed_fibers)
+# # for i in range(4):
+# #     cprint(f"{values[i]} signal density: {'{0:.2%}'.format(sig_dens[i])}", 'cyan')
+
+# print("AVERAGE WIDTH")
+# width_avgs = get_average_width_per_zone(ctf_output, bucketed_fibers)
+# for i in range(4):
+#     cprint(f"{values[i]} width averages: {width_avgs[i]}", 'green')
+    
+# # print("AVERAGE LENGTHS")
+# # len_avgs = get_average_length_per_zone(ctf_output, bucketed_fibers)
+# # for i in range(4):
+# #     cprint(f"{values[i]} length averages: {len_avgs[i]}", 'yellow')
+    
+# # print("AVERAGE Angles")
+# # len_avgs = get_average_angle_per_zone(ctf_output, bucketed_fibers)
+# # for i in range(4):
+# #     cprint(f"{values[i]} angle averages: {len_avgs[i]}", 'magenta')
+
+# # for i in range(4):
+# #     draw_helper.reset(TIF_FILEPATH)
+# #     draw_helper.draw_fibers_per_zone(bucketed_fibers, i)
+# #     final_path = os.path.join(sys.path[0], 'bong_overlayed.tif')
+# #     draw_helper.rgbimg.save(final_path)
+# #     plot_helper = PlottingHelper(ctf_output, annotation_helper, final_path)
+# #     plot_helper._plot_zones([0, 50, 150], to_plot=[3-i])
+# #     plot_helper.show_plot()
+    
+#     #1 is mid, 2 is epith, 3 is interior
 
 
 # TO SAVE:

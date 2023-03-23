@@ -186,24 +186,24 @@ class PlottingHelper():
     def _rgb_to_hex(self, rgb):
         return '#%02x%02x%02x' % rgb
 
-    def _plot_annotations(self, plot_anno_indexes=False):
+    def _plot_annotations(self, annotations_to_plot=[], plot_anno_indexes=False):
         for i, annotation in enumerate(self.annotation_helper_obj.annotations):
-            
-            original_annotation_poly = annotation.geo_polygon
-            x, y = original_annotation_poly.exterior.xy
-            
-            # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
-            y_points = np.abs(np.array(y) - self.img_dims[1]) 
-            stacked = np.column_stack((x, y_points))
-            fixed_y_annotation_poly = geo.Polygon(stacked)
-            plot_polygon(fixed_y_annotation_poly, self.ax, add_points = False, fill=False, linewidth = 4, alpha=1, 
-                    color=self._rgb_to_hex(tuple(annotation.color)))
-            
-            # If for debugging you want to plot the indexes of each annotation
-            if plot_anno_indexes:
-                xcent = fixed_y_annotation_poly.centroid.coords.xy[0][0]
-                ycent = fixed_y_annotation_poly.centroid.coords.xy[1][0]
-                self.ax.text(xcent, ycent, f'ind: {i}', fontsize=12, color='orange')
+            if(len(annotations_to_plot) == 0 or annotation.name in annotations_to_plot):
+                original_annotation_poly = annotation.geo_polygon
+                x, y = original_annotation_poly.exterior.xy
+                
+                # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
+                y_points = np.abs(np.array(y) - self.img_dims[1]) 
+                stacked = np.column_stack((x, y_points))
+                fixed_y_annotation_poly = geo.Polygon(stacked)
+                plot_polygon(fixed_y_annotation_poly, self.ax, add_points = False, fill=False, linewidth = 4, alpha=1, 
+                        color=self._rgb_to_hex(tuple(annotation.color)))
+                
+                # If for debugging you want to plot the indexes of each annotation
+                if plot_anno_indexes:
+                    xcent = fixed_y_annotation_poly.centroid.coords.xy[0][0]
+                    ycent = fixed_y_annotation_poly.centroid.coords.xy[1][0]
+                    self.ax.text(xcent, ycent, f'{i, annotation.name}', fontsize=12, color='orange')
     
     def _plot_zones(self, zones=[0, 50, 150], to_plot=[0, 1, 2, 3]):
         colors = ['orange', 'green', 'magenta', 'red']

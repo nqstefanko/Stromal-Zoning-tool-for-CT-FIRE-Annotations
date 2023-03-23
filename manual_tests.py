@@ -60,7 +60,13 @@ def test_plot_zones_with_overlay():
     PLOT_HELPER.plot_final_overlay() # Annotations on Bottom 
     PLOT_HELPER.show_plot()
 
-
+def test_plot_annotations_only_dcis():
+    PLOT_HELPER._plot_annotations(['DCIS'])
+    PLOT_HELPER.show_plot()
+    PLOT_HELPER.reset()
+    PLOT_HELPER._plot_annotations(['Ignore'])
+    PLOT_HELPER.show_plot()
+    
 ############ MANUAL PLOTTING/PLOT_HELPER TESTS: ############
 # test_plot_annotations()
 # test_plot_annotations_with_indexes()
@@ -68,6 +74,7 @@ def test_plot_zones_with_overlay():
 # test_plot_zones()
 # test_plot_overlay()
 # test_plot_zones_with_overlay()
+# test_plot_annotations_of_correct_name()
 ############ MANUAL PLOTTING/PLOT_HELPER TESTS: ############
 
 
@@ -157,4 +164,4 @@ def test_getting_averages():
     for i in range(4):
         cprint(f"{values[i]} angle averages: {len_avgs[i]}", 'magenta')
 
-test_getting_averages()
+# test_getting_averages()

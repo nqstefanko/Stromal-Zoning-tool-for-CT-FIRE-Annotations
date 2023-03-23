@@ -11,6 +11,26 @@ class Annotation():
         self.points = pts
         self.geo_polygon = geo.Polygon(pts)
 
+# Annotation Manaer Class could have a list of all annoaitons, and then we cut out 
+# We call annotaiton manager, like draw annotaiotns, and we can also pass optional ambada or argumetn
+# sayin we want a specific type, it culd ran a lambda filter on teh annotation objects
+
+# New list of filtere items, we can pass in functions
+# Filter and extract and then pass those to the draw function
+
+# Common like MVC, the model contains the state, the view reads from the state, and the controller updates teh sat
+# model has data, controller modifyes, and view shows
+
+# in CPP, pointers? Dont wanna use raw pts, want smart like unique, and shared. And we consider it as unique pointer, 
+# Things want unique plotting ccalls, should be called by something else, maybe we want that to draw the data. 
+
+# Android wanna draw on Canvas, create canvas, and ive canvas ot painer, and directly draws to it. I own the cancas, and ive pointer ot cavnas
+# Thus I manage the cavas lifecycle, 
+
+# Draw functions could take the canvas in, and now. I wanna draw on two separate cavnasses, and now we ca just draw cancer or not cancer
+
+# If draw everythin then just give the same canvas. 
+
 class AnnotationHelper():
     "This class is related to everything that has to do with annotations and geojson export file"
     def __init__(self, annotated_geojson_filepath, image_dims=(3700, 3700)) -> None:
@@ -20,6 +40,7 @@ class AnnotationHelper():
         
         self.feature_collection_dict = {}
         self.annotations = []
+        self.all_annotations = []
         self.zoned_polys = []
         
         with open(annotated_geojson_filepath, "r") as exported_annotation_fp:
@@ -41,9 +62,19 @@ class AnnotationHelper():
                 color = classification.get('color', [255, 0, 0]) # Ex: [255, 0, 255]
                 
                 self.annotations.append(Annotation( name, color, np.array(points)))
+                self.all_annotations.append(Annotation( name, color, np.array(points)))
 
     def get_annoatations(self):
         return self.annotations
+    
+    def set_annotations(self, anno_names):
+        self.annotations = []
+        for annotation in self.all_annotations:
+            if(annotation.name in anno_names):
+                self.annotations.append(annotation)
+            
+    def reset_annotations(self):
+        self.annotations = self.all_annotations
     
     def get_final_zones(self, zones):
         """This takes each annotation, and creates the additional zones (+1 for other stromal) and sends it"""
@@ -84,7 +115,7 @@ class AnnotationHelper():
             
         return list_of_union_zones + [other_stromal_area]
     
-    def get_final_zones_for_plotting(self, zones, ax):
+    def get_final_zones_for_plotting(self, zones):
         """USED ONLY FOR PLOTTING. Ignore otherwise"""
         list_of_union_zones = [None] * len(zones)
         

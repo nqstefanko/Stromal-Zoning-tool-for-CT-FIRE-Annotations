@@ -5,10 +5,11 @@ import numpy as np
 from shapely.plotting import plot_polygon
 
 class Annotation():
-    def __init__(self, name, color, pts) -> None:
+    def __init__(self, name, color, pts, og_index) -> None:
         self.name = name
         self.color = color
         self.points = pts
+        self.original_index = og_index
         self.geo_polygon = geo.Polygon(pts)
 
 # Annotation Manaer Class could have a list of all annoaitons, and then we cut out 
@@ -61,18 +62,25 @@ class AnnotationHelper():
                 name = classification['name']  # Ex: DCIS, Ignore
                 color = classification.get('color', [255, 0, 0]) # Ex: [255, 0, 255]
                 
-                self.annotations.append(Annotation( name, color, np.array(points)))
-                self.all_annotations.append(Annotation( name, color, np.array(points)))
+                self.annotations.append(Annotation( name, color, np.array(points), i))
+                self.all_annotations.append(Annotation( name, color, np.array(points), i))
 
-    def get_annoatations(self):
-        return self.annotations
+    def get_specific_annotations(self, anno_names=[]):
+        if not anno_names:
+            return self.annotations
+        specific_annos = []
+        for annotation in self.all_annotations:
+            if(annotation.name in anno_names):
+                specific_annos.append(annotation)
+        return specific_annos
     
     def set_annotations(self, anno_names):
         self.annotations = []
         for annotation in self.all_annotations:
-            if(annotation.name in anno_names):
+            if(not anno_names or annotation.name in anno_names):
                 self.annotations.append(annotation)
-            
+        return self.annotations
+    
     def reset_annotations(self):
         self.annotations = self.all_annotations
     

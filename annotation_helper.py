@@ -102,7 +102,7 @@ class AnnotationHelper():
             
         return list_of_union_zones + [other_stromal_area]
     
-    def get_final_zones_for_plotting(self, zones):
+    def get_final_zones_for_plotting(self, zones, annotations_names=[]):
         """USED ONLY FOR PLOTTING. Ignore otherwise"""
         list_of_union_zones = [None] * len(zones)
         
@@ -110,33 +110,32 @@ class AnnotationHelper():
         picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
         
         for annotation in self.annotations:
-            original_annotation_poly = annotation.geo_polygon
-            # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
-            curr_poly = []
-            x, y = original_annotation_poly.exterior.xy
-            img_height = self.img_dims[1]
-            y_points = np.abs(np.array(y) - img_height) 
-            stacked = np.column_stack((x, y_points))
-            fixed_y_annotation_poly = geo.Polygon(stacked)
+            if(not annotations_names or annotation.name in annotations_names):
+                original_annotation_poly = annotation.geo_polygon
+                # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
+                curr_poly = []
+                x, y = original_annotation_poly.exterior.xy
+                img_height = self.img_dims[1]
+                y_points = np.abs(np.array(y) - img_height) 
+                stacked = np.column_stack((x, y_points))
+                fixed_y_annotation_poly = geo.Polygon(stacked)
 
-            for i, zone in enumerate(zones):                
-                if(zone <= 0):
-                    difference_poly = fixed_y_annotation_poly
-                else:
-                    poly_to_use = curr_poly[i - 1]
-                    zone_size = zone - zones[i - 1]
-                    dilated_poly = poly_to_use.buffer(zone_size, single_sided=True)
-                    dilated_poly = picture_poly.intersection(dilated_poly) # Getting rid of stuff past photo edges
-                    difference_poly = dilated_poly.difference(poly_to_use).difference(fixed_y_annotation_poly)      
-                
-                if(list_of_union_zones[i]):
-                    list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
-                else:
-                    list_of_union_zones[i] = difference_poly
-                curr_poly.append(difference_poly)
+                for i, zone in enumerate(zones):                
+                    if(zone <= 0):
+                        difference_poly = fixed_y_annotation_poly
+                    else:
+                        poly_to_use = curr_poly[i - 1]
+                        zone_size = zone - zones[i - 1]
+                        dilated_poly = poly_to_use.buffer(zone_size, single_sided=True)
+                        dilated_poly = picture_poly.intersection(dilated_poly) # Getting rid of stuff past photo edges
+                        difference_poly = dilated_poly.difference(poly_to_use).difference(fixed_y_annotation_poly)      
+                    
+                    if(list_of_union_zones[i]):
+                        list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
+                    else:
+                        list_of_union_zones[i] = difference_poly
+                    curr_poly.append(difference_poly)
 
-        # list_of_union_zones = reversed(list_of_union_zones)                    
-        # list_of_union_zones.reverse()
         other_stromal_area =  geo.Polygon([[p[0], p[1]] for p in point_list])
         for final_union_zone_polygon in list_of_union_zones:
             other_stromal_area = other_stromal_area.difference(final_union_zone_polygon)

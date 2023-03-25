@@ -3,10 +3,15 @@ from annotation_helper import AnnotationHelper
 from test_export import *
 from termcolor import cprint, colored
 
-# #CROPPED_IMG DATA
-TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
-MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop2.mat"
-EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.geojson"
+# # CROPPED_IMG DATA CROP 2
+# TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
+# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop2.mat"
+# EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.geojson"
+
+# CROPPED_IMG DATA CROP 1
+TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.tif"
+MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop1.mat"
+EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.geojson"
 
 #16 DENOISED DATA 16
 # EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-016_10x10_1_Nuclei_Collagen - Denoised.geojson")
@@ -66,8 +71,8 @@ def test_plot_fibers():
     PLOT_HELPER.show_plot()
     
 def test_plot_zones():
-    list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150])))
-    PLOT_HELPER._plot_zones(list_of_union_zones, [0,1,2,3])
+    list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 20, 40, 60, 80])))
+    PLOT_HELPER._plot_zones(list_of_union_zones)
     PLOT_HELPER.show_plot()
 
 def test_plot_overlay():
@@ -115,7 +120,7 @@ def test_all_draw_fibers():
     DRAW_HELPER.save_file_overlay('images/penis.tif')
 
 def test_draw_zones():
-    zones = list(reversed(ANNOTATION_HELPER.get_final_zones([0, 50, 150])))
+    zones = list(reversed(ANNOTATION_HELPER.get_final_zones([0, 20, 40, 60, 80])))
     to_draw = np.arange(len(zones))
     DRAW_HELPER.draw_zones(zones, to_draw=to_draw)
     DRAW_HELPER.save_file_overlay('images/penis.tif')
@@ -140,8 +145,10 @@ def test_draw_overlay():
 # test_draw_annotations_with_indexes()
 # test_draw_fibers()
 # test_all_draw_fibers()
-# test_draw_zones()
-test_draw_overlay()
+test_draw_zones()
+test_plot_zones()
+
+# test_draw_overlay()
 ############ MANUAL DRAWING/DRAW_HELPER TESTS: ############
 
 def test_draw_fibers_per_zone_single_zone():
@@ -158,7 +165,7 @@ def test_draw_fibers_per_zone_single_zone():
     widths = CTF_OUTPUT.get_fiber_widths_thresholded()
     DRAW_HELPER.draw_fibers_per_zone(verts, widths, bucketed_fibers, [1, 2])
 
-    final_path = os.path.join(sys.path[0], 'boob.tif')
+    final_path = os.path.join(sys.path[0], 'images/penis.tif')
     composite_image = Image.alpha_composite(DRAW_HELPER.image, DRAW_HELPER.rgbimg)
     composite_image.save(final_path)
 
@@ -167,7 +174,6 @@ def test_draw_fibers_per_zone_single_zone_only_dcis():
     centroids = CTF_OUTPUT.get_centroids()
 
     # DRAW_HELPER.draw_annotations(ANNOTATION_HELPER.annotations, 'bongbong.tif', draw_anno_indexes = False)
-
     zones = list(reversed(ANNOTATION_HELPER.get_final_zones([0, 50, 150], ['DCIS'])))
     DRAW_HELPER.draw_zones(zones, to_draw=[0,1,2,3])
 
@@ -176,7 +182,7 @@ def test_draw_fibers_per_zone_single_zone_only_dcis():
     widths = CTF_OUTPUT.get_fiber_widths_thresholded()
     DRAW_HELPER.draw_fibers_per_zone(verts, widths, bucketed_fibers, [0, 3])
 
-    final_path = os.path.join(sys.path[0], 'boob.tif')
+    final_path = os.path.join(sys.path[0], 'images/penis.tif')
     composite_image = Image.alpha_composite(DRAW_HELPER.image, DRAW_HELPER.rgbimg)
     composite_image.save(final_path)
 
@@ -197,12 +203,12 @@ def test_plot_fibers_per_zone_single_zone_only_dcis():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
     centroids = CTF_OUTPUT.get_centroids()
 
-    ANNOTATION_HELPER.set_annotations(['DCIS'])
-    bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.annotations)
+    specific_annos = ANNOTATION_HELPER.get_specific_annotations(['DCIS'])
+    bucketed_fibers = bucket_the_fibers(fibers, centroids, specific_annos)
     verts = CTF_OUTPUT.get_fiber_vertices_thresholded()
     for i in range(4):
         PLOT_HELPER._plot_fibers_per_zone(verts, bucketed_fibers, [i])
-        list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150])))
+        list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150], ['DCIS'])))
         PLOT_HELPER._plot_zones(list_of_union_zones)
         PLOT_HELPER.show_plot()
         PLOT_HELPER.reset()
@@ -213,25 +219,6 @@ def test_plot_fibers_per_zone_single_zone_only_dcis():
 # test_plot_fibers_per_zone_single_zone()
 # test_plot_fibers_per_zone_single_zone_only_dcis()
 ############## TEST Plotting/Drawing per zone  ########
-
-
-def test_get_signal_densities():
-    values = ["DCIS", "Epithelial", "Mid-Stromal", "Other Stromal"]
-    fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
-    centroids = CTF_OUTPUT.get_centroids()
-
-    bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.annotations)
-    print(bucketed_fibers.shape)
-    
-    print("SIGNAL DENSITIES")
-    lengths = CTF_OUTPUT.get_fiber_lengths_thresholded()
-    widths = CTF_OUTPUT.get_fiber_widths_thresholded()
-    final_union_of_zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150]) 
-    sig_dens = get_signal_density_overall(lengths, widths, final_union_of_zones, bucketed_fibers)
-    for i in range(4):
-        cprint(f"{values[i]} signal density: {'{0:.2%}'.format(sig_dens[i])}", 'cyan')
-
-
 def test_getting_averages():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
     centroids = CTF_OUTPUT.get_centroids()
@@ -256,13 +243,11 @@ def test_getting_averages():
     for i in range(4):
         cprint(f"{values[i]} angle averages: {len_avgs[i]}", 'magenta')
 
-
-def test_get_signal_densities_only_dcis():
+def test_get_signal_densities():
     values = ["DCIS", "Epithelial", "Mid-Stromal", "Other Stromal"]
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
     centroids = CTF_OUTPUT.get_centroids()
-    
-    ANNOTATION_HELPER.set_annotations(['DCIS'])
+
     bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.annotations)
     print(bucketed_fibers.shape)
     
@@ -273,8 +258,24 @@ def test_get_signal_densities_only_dcis():
     sig_dens = get_signal_density_overall(lengths, widths, final_union_of_zones, bucketed_fibers)
     for i in range(4):
         cprint(f"{values[i]} signal density: {'{0:.2%}'.format(sig_dens[i])}", 'cyan')
-        
 
+def test_get_signal_densities_only_dcis():
+    values = ["DCIS", "Epithelial", "Mid-Stromal", "Other Stromal"]
+    fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
+    centroids = CTF_OUTPUT.get_centroids()
+    
+    ANNOTATION_HELPER.get_specific_annotations(['DCIS'])
+    bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.get_specific_annotations(['DCIS']))
+    print(bucketed_fibers.shape)
+    
+    print("SIGNAL DENSITIES")
+    lengths = CTF_OUTPUT.get_fiber_lengths_thresholded()
+    widths = CTF_OUTPUT.get_fiber_widths_thresholded()
+    final_union_of_zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150], ['DCIS']) 
+    sig_dens = get_signal_density_overall(lengths, widths, final_union_of_zones, bucketed_fibers)
+    for i in range(4):
+        cprint(f"{values[i]} signal density: {'{0:.2%}'.format(sig_dens[i])}", 'cyan')
+        
 def test_get_signal_density_only_in_stromal_region():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
     centroids = CTF_OUTPUT.get_centroids()
@@ -286,7 +287,6 @@ def test_get_signal_density_only_in_stromal_region():
      
     singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, [1,2,3])
     cprint(f"Singal Density Stromal: {singnal_dens_only_stromal}", 'magenta')
-
 
 def test_get_signal_density_per_annotation():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
@@ -302,8 +302,8 @@ def test_get_signal_density_per_annotation():
 
 
 ############## TEST Signal_Densities and Averages per zone  ########
-# test_get_signal_densities()
 # test_getting_averages()
+# test_get_signal_densities()
 # test_get_signal_densities_only_dcis()
 # test_get_signal_density_only_in_stromal_region()
 # test_get_signal_density_per_annotation()

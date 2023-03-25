@@ -88,8 +88,16 @@ class MenuWindow:
         
         # Create a button to set the GUI_Helper Object
         self.set_up_object_button = tk.Button(self.fileselector_frame, text='Set Up Objects', command=self.set_objects)
-        self.set_up_object_button.grid(row=4)
+        self.set_up_object_button.grid(row=4, column=0)
         
+        # Create a button to set the GUI_Helper Object
+        self.set_up_object_button = tk.Button(self.fileselector_frame, text='Reset Object', command=self.clear_object)
+        self.set_up_object_button.grid(row=4, column=1)
+        
+        # Frames
+        self.fileselector_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)
+        
+    def widgets_to_display_after_obj_set(self):
         #ZONES Entry
         self.csv_boundaries_label = tk.Label(self.frame, text="CSV boundaries of zones (Default: 0, 50, 150):")
         self.csv_boundaries_label.grid(row=0, column=0, padx=5, pady=5, sticky="W")
@@ -140,64 +148,27 @@ class MenuWindow:
         self.bucket_fibers_label = tk.Label(self.frame, text="Fibers currently UNBUCKETED!", fg= "red")
         self.bucket_fibers_label.grid(row=5,padx=5, pady=5, sticky="W")
         
+        # Calculate the averages button:
+        self.get_averages_button = tk.Button(self.frame, text='Calculate Averages', command=self.calc_averages)
+        self.get_averages_button.grid(row=6, padx=5, pady=5, sticky="W")
+        
+        # Calculate the Signal Densities Button:
+        self.get_averages_button = tk.Button(self.frame, text='Calculate Signal Densities', command=self.calc_signal_densities)
+        self.get_averages_button.grid(row=6, padx=5, pady=5, sticky="W")
+        
         # Display Edited Image Button
         self.display_edited_image_button = tk.Button(self.frame, text='Display Edited Image', command=self.display_image)
-        self.display_edited_image_button.grid(row=6, padx=5, pady=5, sticky="W")
+        self.display_edited_image_button.grid(row=7, padx=5, pady=5, sticky="W")
         
-        # Calculate the averages please:
-        self.get_averages_button = tk.Button(self.frame, text='Calculate Averages', command=self.calc_averages)
-        self.get_averages_button.grid(row=7, padx=5, pady=5, sticky="W")
+        # Save Image Button
+        self.save_button = tk.Button(self.frame, text='Save Image', command=self.save_image)
+        self.save_button.grid(row=8, column=0, padx=5, pady=5, sticky=tk.W)
         
-        # Frames
-        self.fileselector_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)
-        # self.checkbox_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)
+        self.bucket_fibers_textbox = tk.Entry(self.frame, width=100)
+        self.bucket_fibers_textbox.grid(row=8, column=1, columnspan=3,  padx=5, pady=5, sticky="W")
+        
         self.frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)
-        
-    def set_everything_else(self):        
-        # Create final saver of images
-        self.save_label = tk.Label(self.fileselector_frame, text="Save Image...")
-        self.save_label.grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
-        self.save_text = tk.StringVar()
-        self.save_entry = tk.Entry(self.fileselector_frame, textvariable=self.save_text, width=50)
-        self.save_entry.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
-        self.save_button = tk.Button(self.fileselector_frame, text='Save Image', command=self.save_image)
-        self.save_button.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
-        self.file_clear_button = tk.Button(self.fileselector_frame, text='Clear', command=self.save_image)
-        self.file_clear_button.grid(row=3, column=3, padx=5, pady=5)
-        
-        # Create Spinbox to display number of zones
-        self.num_zones_label = tk.Label(self.checkbox_frame, text="Number of Zones:")
-        self.num_zones_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
-
-        self.num_zones_spinbox = tk.Spinbox(self.checkbox_frame, from_=0, to=10, width=5, command=self.show_checkboxes)
-        self.num_zones_spinbox.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
-        self.num_zones_spinbox.delete(0, "end")
-        self.num_zones_spinbox.insert(0, 0)
-        
-        self.show_checkboxes(1)
-
-        # Checkboxes and textboxes
-        self.draw_annotations_var = tk.BooleanVar()
-        self.draw_annotations_checkbox = tk.Checkbutton(self.frame, text="Draw Annotations", variable=self.draw_annotations_var)
-        self.draw_annotations_checkbox.config(selectcolor='green')
-        
-        self.draw_annotations_checkbox.grid(row=0, column=0, padx=5, pady=5, sticky="W")
-
-        self.draw_annotations_textbox = tk.Entry(self.frame)
-        self.draw_annotations_textbox.grid(row=0, column=1, padx=5, pady=5)
-
-        self.draw_fibers_var = tk.BooleanVar()
-        self.draw_fibers_checkbox = tk.Checkbutton(self.frame, text="Draw Fibers", variable=self.draw_fibers_var)
-        self.draw_fibers_checkbox.grid(row=1, column=0, padx=5, pady=5, sticky="W")
-
-        self.draw_zones_var = tk.BooleanVar()
-        self.draw_zones_checkbox = tk.Checkbutton(self.frame, text="Draw Zones", variable=self.draw_zones_var)
-        self.draw_zones_checkbox.config(selectcolor='green')
-        self.draw_zones_checkbox.grid(row=2, column=0, padx=5, pady=5, sticky="W")
-
-        self.draw_zones_textbox = tk.Entry(self.frame)
-        self.draw_zones_textbox.grid(row=2, column=1, padx=5, pady=5)
-
+    
     def set_objects(self):
         mat_file = self.mat_fileselector.file_text.get()
         img_file = self.img_fileselector.file_text.get()
@@ -208,8 +179,18 @@ class MenuWindow:
             return 
 
         self.backend = GUI_Helper(img_file, mat_file, anno_file)
+        self.widgets_to_display_after_obj_set()
         cprint("All objects set!", "cyan")
 
+    def clear_object(self):
+        self.img_fileselector.clear_file()
+        self.mat_fileselector.clear_file()
+        self.geojson_fileselector.clear_file()
+        self.backend = None
+        self.frame.pack_forget()
+        
+        cprint("Clearing the object!", 'cyan')
+    
     def show_checkboxes(self, starting_row=7):
         # Remove existing checkboxes and entries
         for widget in self.checkbox_frame.winfo_children():
@@ -339,6 +320,9 @@ class MenuWindow:
         cprint(len_avg_str, 'cyan')
         cprint(ang_avg_str, 'magenta')
 
+    def calc_signal_densities():
+        cprint("Calculating Signal Density", 'magenta')
+
             
 class ImageWindow:
     def __init__(self, master, filename=None, image=None):
@@ -446,3 +430,52 @@ if __name__ == '__main__':
 # menu.add_cascade(label="Options", menu=options_menu)    # Adding cascade
 
 # root.config(menu=menu)    # So that the menubar is visible
+
+
+
+
+# def set_everything_else(self):        
+#         # Create final saver of images
+#         self.save_label = tk.Label(self.fileselector_frame, text="Save Image...")
+#         self.save_label.grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
+#         self.save_text = tk.StringVar()
+#         self.save_entry = tk.Entry(self.fileselector_frame, textvariable=self.save_text, width=50)
+#         self.save_entry.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
+#         self.save_button = tk.Button(self.fileselector_frame, text='Save Image', command=self.save_image)
+#         self.save_button.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
+#         self.file_clear_button = tk.Button(self.fileselector_frame, text='Clear', command=self.save_image)
+#         self.file_clear_button.grid(row=3, column=3, padx=5, pady=5)
+        
+#         # Create Spinbox to display number of zones
+#         self.num_zones_label = tk.Label(self.checkbox_frame, text="Number of Zones:")
+#         self.num_zones_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+
+#         self.num_zones_spinbox = tk.Spinbox(self.checkbox_frame, from_=0, to=10, width=5, command=self.show_checkboxes)
+#         self.num_zones_spinbox.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+#         self.num_zones_spinbox.delete(0, "end")
+#         self.num_zones_spinbox.insert(0, 0)
+        
+#         self.show_checkboxes(1)
+
+#         # Checkboxes and textboxes
+#         self.draw_annotations_var = tk.BooleanVar()
+#         self.draw_annotations_checkbox = tk.Checkbutton(self.frame, text="Draw Annotations", variable=self.draw_annotations_var)
+#         self.draw_annotations_checkbox.config(selectcolor='green')
+        
+#         self.draw_annotations_checkbox.grid(row=0, column=0, padx=5, pady=5, sticky="W")
+
+#         self.draw_annotations_textbox = tk.Entry(self.frame)
+#         self.draw_annotations_textbox.grid(row=0, column=1, padx=5, pady=5)
+
+#         self.draw_fibers_var = tk.BooleanVar()
+#         self.draw_fibers_checkbox = tk.Checkbutton(self.frame, text="Draw Fibers", variable=self.draw_fibers_var)
+#         self.draw_fibers_checkbox.grid(row=1, column=0, padx=5, pady=5, sticky="W")
+
+#         self.draw_zones_var = tk.BooleanVar()
+#         self.draw_zones_checkbox = tk.Checkbutton(self.frame, text="Draw Zones", variable=self.draw_zones_var)
+#         self.draw_zones_checkbox.config(selectcolor='green')
+#         self.draw_zones_checkbox.grid(row=2, column=0, padx=5, pady=5, sticky="W")
+
+#         self.draw_zones_textbox = tk.Entry(self.frame)
+#         self.draw_zones_textbox.grid(row=2, column=1, padx=5, pady=5)
+        # self.checkbox_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)

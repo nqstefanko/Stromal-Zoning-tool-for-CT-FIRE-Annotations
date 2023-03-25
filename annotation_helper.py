@@ -12,25 +12,6 @@ class Annotation():
         self.original_index = og_index
         self.geo_polygon = geo.Polygon(pts)
 
-# Annotation Manaer Class could have a list of all annoaitons, and then we cut out 
-# We call annotaiton manager, like draw annotaiotns, and we can also pass optional ambada or argumetn
-# sayin we want a specific type, it culd ran a lambda filter on teh annotation objects
-
-# New list of filtere items, we can pass in functions
-# Filter and extract and then pass those to the draw function
-
-# Common like MVC, the model contains the state, the view reads from the state, and the controller updates teh sat
-# model has data, controller modifyes, and view shows
-
-# in CPP, pointers? Dont wanna use raw pts, want smart like unique, and shared. And we consider it as unique pointer, 
-# Things want unique plotting ccalls, should be called by something else, maybe we want that to draw the data. 
-
-# Android wanna draw on Canvas, create canvas, and ive canvas ot painer, and directly draws to it. I own the cancas, and ive pointer ot cavnas
-# Thus I manage the cavas lifecycle, 
-
-# Draw functions could take the canvas in, and now. I wanna draw on two separate cavnasses, and now we ca just draw cancer or not cancer
-
-# If draw everythin then just give the same canvas. 
 
 class AnnotationHelper():
     "This class is related to everything that has to do with annotations and geojson export file"
@@ -84,37 +65,35 @@ class AnnotationHelper():
     def reset_annotations(self):
         self.annotations = self.all_annotations
     
-    def get_final_zones(self, zones):
+    def get_final_zones(self, zones, annotations_names=[]):
         """This takes each annotation, and creates the additional zones (+1 for other stromal) and sends it"""
         list_of_union_zones = [None] * len(zones)
         
         point_list = [[0,0], [self.img_dims[0], 0], [self.img_dims[0], self.img_dims[1]], [0, self.img_dims[1]]]
         picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
-        
         for annotation in self.annotations:
-            original_annotation_poly = annotation.geo_polygon
-            curr_poly = []
-            for i, zone in enumerate(zones):                
-                if(zone <= 0):
-                    difference_poly = original_annotation_poly
-                else:
-                    poly_to_use = curr_poly[i - 1]
-                    zone_size = zone - zones[i - 1]
-                    dilated_poly = poly_to_use.buffer(zone_size, single_sided=True)
-                    dilated_poly = picture_poly.intersection(dilated_poly)
-                    difference_poly = dilated_poly.difference(poly_to_use).difference(original_annotation_poly)      
-                
-                if(list_of_union_zones[i]):
-                    list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
-                else:
-                    list_of_union_zones[i] = difference_poly
-                curr_poly.append(difference_poly)
+            if(not annotations_names or annotation.name in annotations_names):
+                original_annotation_poly = annotation.geo_polygon
+                curr_poly = []
+                for i, zone in enumerate(zones):                
+                    if(zone <= 0):
+                        difference_poly = original_annotation_poly
+                    else:
+                        poly_to_use = curr_poly[i - 1] # Previous Sized Polygon
+                        zone_size = zone - zones[i - 1] # What to increase boundary by in pixels
+                        dilated_poly = poly_to_use.buffer(zone_size, single_sided=True) # Increase Boundaries
+                        dilated_poly = picture_poly.intersection(dilated_poly) #If boundaries extend outside of image, cut it out
+                        difference_poly = dilated_poly.difference(poly_to_use) #.difference(original_annotation_poly)      
+                    if(list_of_union_zones[i]):
+                        list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
+                    else:
+                        list_of_union_zones[i] = difference_poly
+                    curr_poly.append(difference_poly)
 
         other_stromal_area =  geo.Polygon([[p[0], p[1]] for p in point_list])
         for final_union_zone_polygon in list_of_union_zones:
             other_stromal_area = other_stromal_area.difference(final_union_zone_polygon)
 
-        
         final_to_add = list_of_union_zones[0]
         for i, zone in enumerate(list_of_union_zones[1:]):
             zone = zone.difference(final_to_add)

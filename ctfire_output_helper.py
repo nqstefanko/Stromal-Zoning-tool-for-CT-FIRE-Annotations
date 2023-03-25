@@ -156,6 +156,8 @@ class CTFIREOutputHelper():
         return self.ctfire_dict[key]
 
 
+
+
 # ctfire_parameters = ctfire_export_dict['cP']
 # ctfire_data = ctfire_export_dict['data']
 # ctfire_M_data = ctfire_data['M']

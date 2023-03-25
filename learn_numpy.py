@@ -36,13 +36,26 @@ fibers_simulation = np.array([
     [5,5,5,5],
 ])
 
+widths_simulation = np.array([4,5,6,7,8])
+length_simulation = np.array([1,2,3,4,5])
+
+x_simul = np.array([1,2,3,4,5])
+y_simul = np.array([1,2,3,4,5])
+
+print(np.vstack((x_simul, y_simul)).T)
 temp_test = np.array([0,2,3])
 temp_test2 = np.array([0, 10, 11, 4, 5, 12])
 
-print(fibers_simulation[temp_test])
-print(np.where(temp_test2 > 10)[0])
-# widths_simulation = np.array([4,5,6,7,8])
-# length_simulation = np.array([1,2,3,4,5])
+# print(np.arange(4))
+# print(fibers_simulation[temp_test])
+# print(np.where(temp_test2 > 10)[0])
+# print(np.min(fiber_buckets_simulation, axis=0)) # Per Annotation # Do not use, just use the index
+# print(np.min(fiber_buckets_simulation, axis=1)) # Per Fiber
+# print(fiber_buckets_simulation[:, 1])
+# fibs_in_annos = np.where(fiber_buckets_simulation[:, 1] == 2)
+# print(widths_simulation[fibs_in_annos])
+
+# print(widths_simulation * length_simulation)
 
 # labeled_fibers = fiber_buckets_simulation.min(axis=1)
 # cprint(f"Labeled Fibers: {labeled_fibers}", 'green')

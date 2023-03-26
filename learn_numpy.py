@@ -39,20 +39,39 @@ fibers_simulation = np.array([
 widths_simulation = np.array([4,5,6,7,8])
 length_simulation = np.array([1,2,3,4,5])
 
-labeled_fibers = fiber_buckets_simulation.min(axis=1)
-cprint(f"Labeled Fibers: {labeled_fibers}", 'green')
-sum_values = np.array(range(4))
-cprint(f"sum_values: {sum_values}", 'cyan')
-final_counts = {0:0, 1:0, 2:0, 3:0}
+x_simul = np.array([1,2,3,4,5])
+y_simul = np.array([1,2,3,4,5])
+
+print(np.vstack((x_simul, y_simul)).T)
+temp_test = np.array([0,2,3])
+temp_test2 = np.array([0, 10, 11, 4, 5, 12])
+
+# print(np.arange(4))
+# print(fibers_simulation[temp_test])
+# print(np.where(temp_test2 > 10)[0])
+# print(np.min(fiber_buckets_simulation, axis=0)) # Per Annotation # Do not use, just use the index
+# print(np.min(fiber_buckets_simulation, axis=1)) # Per Fiber
+# print(fiber_buckets_simulation[:, 1])
+# fibs_in_annos = np.where(fiber_buckets_simulation[:, 1] == 2)
+# print(widths_simulation[fibs_in_annos])
+
+# print(widths_simulation * length_simulation)
+
+# labeled_fibers = fiber_buckets_simulation.min(axis=1)
+# cprint(f"Labeled Fibers: {labeled_fibers}", 'green')
+# sum_values = np.array(range(4))
+# cprint(f"sum_values: {sum_values}", 'cyan')
+# final_counts = {0:0, 1:0, 2:0, 3:0}
 # for i, fiber in enumerate(fibers_simulation):
-#     final_counts[labeled_fibers[i]] += len(fiber)
+#     final_counts[labeled_fibers[i]] += 1
+# print(final_counts)
 # print(np.sum(fibers_simulation[sum_values], axis=0))
 
-fiber_per_annotation = fiber_buckets_simulation[:, 2:].flatten()
-print(fiber_per_annotation)
-for i, bucket in enumerate(fiber_per_annotation):
-    final_counts[bucket] += widths_simulation[i] * length_simulation[i]
-print(final_counts)
+# fiber_per_annotation = fiber_buckets_simulation[:, 2:].flatten()
+# print(fiber_per_annotation)
+# for i, bucket in enumerate(fiber_per_annotation):
+#     final_counts[bucket] += widths_simulation[i] * length_simulation[i]
+# print(final_counts)
 # print(np.where(labeled_fibers == 0))
 
 # temp = np.array((4,2))

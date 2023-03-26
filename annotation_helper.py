@@ -1,121 +1,173 @@
 import shapely.geometry as geo # Polygon, Point
-import matplotlib.patches as patches
 import geojson
 import numpy as np
+from shapely.plotting import plot_polygon
+
+class Annotation():
+    # It takes four parameters:
+    # - 'name': a string representing the name of the annotation
+    # - 'color': a string representing the color of the annotation
+    # - 'pts': an np.array(len_of_points, 2)
+    # - 'og_index': an integer representing the original index of the annotation
+    def __init__(self, name: str, color: str, pts: np.array, og_index: int) -> None:
+        self.name = name
+        self.color = color
+        self.points = pts
+        self.original_index = og_index
+        self.geo_polygon = geo.Polygon(pts)
+    
+    def __str__(self):
+        return f'Annotation {self.name}, {self.original_index}, {self.color}, {self.points.shape}'
 
 class AnnotationHelper():
-    def __init__(self) -> None:
-        self.points = []
-        self.geo_polygons = []
-        self.patch_polygons = []
-        self.annotation_info = []
-        self.feature_collection_dict = {}
-        self.filepath = ''
-        self.zoned_polys = []
-
-    def load_geojson_file(self, annotated_geojson_filepath):
+    "This class is related to everything that has to do with annotations and geojson export file"
+    def __init__(self, annotated_geojson_filepath, image_dims=(3700, 3700)) -> None:
         self.filepath = annotated_geojson_filepath
+        self.img_dims = image_dims
+
+        self.annotations = []
+        self.feature_collection_dict = {}
+        
         with open(annotated_geojson_filepath, "r") as exported_annotation_fp:
             self.feature_collection_dict = geojson.load(exported_annotation_fp)
-        return self.feature_collection_dict
-    
-    def get_annotations(self, annotated_geojson_filepath):
-        """Gets Annotation Object in form of {colors, points} from exorted QuPath Annotations"""
-        self.filepath = annotated_geojson_filepath
-
-        with open(annotated_geojson_filepath, "r") as exported_annotation_fp:
-            feature_collection_of_annotations = geojson.load(exported_annotation_fp)
-            # self.geo_polygons = np.array(range(len(feature_collection_of_annotations['features'])))
-            # print(self.geo_polygons.shape)
-            for i, feature_collection_annotation in enumerate(feature_collection_of_annotations['features']):
-                # if(i == 26):
-                    # print(f"Feature {colored(str(i), 'green')} - Type: {feature_collection_annotation['type']}, id:{feature_collection_annotation['id']}, Props:{feature_collection_annotation['properties']}")
-                    points = feature_collection_annotation['geometry']['coordinates'][0]
-                    color = feature_collection_annotation['properties']['classification']['color'] # Ex: [255, 0, 255]
-                    name = feature_collection_annotation['properties']['classification']['name']  # Ex: DCIS, Ignore
-                    # Type: Feature, id:3affff8b-be30-410f-ae1f-a415d831b074, Props:{'objectType': 'annotation', 'classification': {'name': 'Ignore', 'color': [255, 0, 0]}
-                    
-                    self.points.append(np.array(points))
-                    self.geo_polygons.append(geo.Polygon(points))
-                    self.patch_polygons.append(patches.Polygon(np.array(points), closed=True))
-                    self.annotation_info.append({'color': color, "name": name})
-        return self.annotation_info, self.points, self.geo_polygons
-
-    def get_final_zones(self, zones, img_dimensions=(3700, 3700)):
-        list_of_union_zones = [None] * len(zones)
-        self.zoned_polys = [[]] * len(self.geo_polygons)
-        for i, original_annotation_poly in enumerate(self.geo_polygons):
-
-            point_list = [[0,0], [img_dimensions[0], 0], [img_dimensions[0], img_dimensions[1]], [0, img_dimensions[1]]]
-            picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
             
-            # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
-            for j, zone in enumerate(zones):
-                if(zone <= 0):
-                    difference_poly = original_annotation_poly
-                else:
-                    dilated_poly = original_annotation_poly.buffer(zone, single_sided=True)
-                    dilated_poly = picture_poly.intersection(dilated_poly)
-                    difference_poly = dilated_poly.difference(original_annotation_poly)        
-                if(list_of_union_zones[j]):
-                    list_of_union_zones[j] = list_of_union_zones[j].union(difference_poly)
-                else:
-                    list_of_union_zones[j] = difference_poly
-                self.zoned_polys[i].append([difference_poly])
+        self._load_annotations() # Will Set self.annotations
 
-        list_of_union_zones.reverse()
+    def _load_annotations(self):
+        """Gets Annotation Object in form of {colors, points} from exorted QuPath Annotations
+        
+            # print(f"Feature {colored(str(i), 'green')} - Type: {feature_collection_annotation['type']}, id:{feature_collection_annotation['id']}, Props:{feature_collection_annotation['properties']}")
+            # Type: Feature, id:3affff8b-be30-410f-ae1f-a415d831b074, Props:{'objectType': 'annotation', 'classification': {'name': 'Ignore', 'color': [255, 0, 0]}
+        """
+        for i, self.feature_collection_dict in enumerate(self.feature_collection_dict['features']):
+           
+            # Depending on how a human exported the annotations, the info like color
+            # may be in the properities field or the props[classification] field
+            points = self.feature_collection_dict['geometry']['coordinates'][0]
+            if self.feature_collection_dict['properties'].get('classification', None):
+                classification = self.feature_collection_dict['properties']['classification']
+            else:
+                classification = self.feature_collection_dict['properties']
+            
+            name = classification['name']  # Ex: DCIS, Ignore
+            color = classification.get('color', [255, 0, 0]) # Ex: [255, 0, 255]
+            
+            self.annotations.append(Annotation( name, color, np.array(points), i))
+    
+    def get_specific_annotations(self, anno_names=[]):
+        if not anno_names:
+            return self.annotations
+        specific_annos = []
+        for annotation in self.annotations:
+            if(annotation.name in anno_names):
+                specific_annos.append(annotation)
+        return specific_annos
+    
+    def get_final_zones(self, zones, annotations_names=[]):
+        """This takes each annotation, and creates the additional zones (+1 for other stromal) and sends it"""
+        list_of_union_zones = [None] * len(zones)
+        
+        point_list = [[0,0], [self.img_dims[0], 0], [self.img_dims[0], self.img_dims[1]], [0, self.img_dims[1]]]
+        picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
+        for annotation in self.annotations:
+            if(not annotations_names or annotation.name in annotations_names):
+                original_annotation_poly = annotation.geo_polygon
+                curr_poly = []
+                for i, zone in enumerate(zones):                
+                    if(zone <= 0):
+                        difference_poly = original_annotation_poly
+                    else:
+                        poly_to_use = curr_poly[i - 1] # Previous Sized Polygon
+                        zone_size = zone - zones[i - 1] # What to increase boundary by in pixels
+                        dilated_poly = poly_to_use.buffer(zone_size, single_sided=True) # Increase Boundaries
+                        dilated_poly = picture_poly.intersection(dilated_poly) #If boundaries extend outside of image, cut it out
+                        difference_poly = dilated_poly.difference(poly_to_use) #.difference(original_annotation_poly)      
+                    if(list_of_union_zones[i]):
+                        list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
+                    else:
+                        list_of_union_zones[i] = difference_poly
+                    curr_poly.append(difference_poly)
 
         other_stromal_area =  geo.Polygon([[p[0], p[1]] for p in point_list])
         for final_union_zone_polygon in list_of_union_zones:
             other_stromal_area = other_stromal_area.difference(final_union_zone_polygon)
 
+        final_to_add = list_of_union_zones[0]
+        for i, zone in enumerate(list_of_union_zones[1:]):
+            zone = zone.difference(final_to_add)
+            list_of_union_zones[i+1] = zone
+            final_to_add = final_to_add.union(zone)
+            
         return list_of_union_zones + [other_stromal_area]
-
-    def get_final_zones_for_plotting(self, zones,  img_dimensions=(3700, 3700)):
+    
+    def get_final_zones_for_plotting(self, zones, annotations_names=[]):
         """USED ONLY FOR PLOTTING. Ignore otherwise"""
         list_of_union_zones = [None] * len(zones)
-        for original_annotation_poly in self.geo_polygons:
+        
+        point_list = [[0,0], [self.img_dims[0], 0], [self.img_dims[0], self.img_dims[1]], [0, self.img_dims[1]]]
+        picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
+        
+        for annotation in self.annotations:
+            if(not annotations_names or annotation.name in annotations_names):
+                original_annotation_poly = annotation.geo_polygon
+                # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
+                curr_poly = []
+                x, y = original_annotation_poly.exterior.xy
+                img_height = self.img_dims[1]
+                y_points = np.abs(np.array(y) - img_height) 
+                stacked = np.column_stack((x, y_points))
+                fixed_y_annotation_poly = geo.Polygon(stacked)
 
-            point_list = [[0,0], [img_dimensions[0], 0], [img_dimensions[0], img_dimensions[1]], [0, img_dimensions[1]]]
-            picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
-            x, y = original_annotation_poly.exterior.xy
-            
-            # Fixes y to adjust to 0,0 in bottom left for plot (not 0,0 top left for image)
-            img_height = img_dimensions[1]
-            y_points = np.abs(np.array(y) - img_height) 
-            stacked = np.column_stack((x, y_points))
-            fixed_y_annotation_poly = geo.Polygon(stacked)
-            for i, zone in enumerate(zones):
-                if(zone <= 0):
-                    difference_poly = fixed_y_annotation_poly
-                else:
-                    dilated_poly = fixed_y_annotation_poly.buffer(zone, single_sided=True)
-                    dilated_poly = picture_poly.intersection(dilated_poly)
-                    difference_poly = dilated_poly.difference(fixed_y_annotation_poly)        
-                if(list_of_union_zones[i]):
-                    list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
-                else:
-                    list_of_union_zones[i] = difference_poly
+                for i, zone in enumerate(zones):                
+                    if(zone <= 0):
+                        difference_poly = fixed_y_annotation_poly
+                    else:
+                        poly_to_use = curr_poly[i - 1]
+                        zone_size = zone - zones[i - 1]
+                        dilated_poly = poly_to_use.buffer(zone_size, single_sided=True)
+                        dilated_poly = picture_poly.intersection(dilated_poly) # Getting rid of stuff past photo edges
+                        difference_poly = dilated_poly.difference(poly_to_use).difference(fixed_y_annotation_poly)      
                     
-        list_of_union_zones.reverse()
+                    if(list_of_union_zones[i]):
+                        list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
+                    else:
+                        list_of_union_zones[i] = difference_poly
+                    curr_poly.append(difference_poly)
+
         other_stromal_area =  geo.Polygon([[p[0], p[1]] for p in point_list])
         for final_union_zone_polygon in list_of_union_zones:
             other_stromal_area = other_stromal_area.difference(final_union_zone_polygon)
 
+        final_to_add = list_of_union_zones[0]
+        for i, zone in enumerate(list_of_union_zones[1:]):
+            zone = zone.difference(final_to_add)
+            list_of_union_zones[i+1] = zone
+            final_to_add = final_to_add.union(zone)
+
+            
         return list_of_union_zones + [other_stromal_area]
+    
+    def get_annotation_areas(self):
+        annotation_area = 0
+        total_area = self.img_dims[0] * self.img_dims[1]
+        for annotation in self.annotations:
+            annotation_area += annotation.geo_polygon.area
+            
+        stromal_area = self.img_dims[0] * self.img_dims[1] - annotation_area
+        stromal_percentage = stromal_area / total_area
+        annotation_percentage = annotation_area / total_area
 
-    # def create_zoned_polys(self, zones):
-    #     for poly in self.geo_polygons:
-    #         final_zones = {}
-    #         for zone in zones:
-    #             x, y = poly.exterior.xy
-    #             final_zones[zone] = poly.buffer(zone, single_sided=True)
-    #         self.zoned_polys.append(final_zones)
-    #     return self.zoned_polys
-
+        return total_area, stromal_area, annotation_area, stromal_percentage, annotation_percentage
 
     def __getitem__(self, key):
         return self.feature_collection_dict[key]
     
     
-    # patches_polygons.append(patches.Polygon(np.array(points), closed=True))
+# patches_polygons.append(patches.Polygon(np.array(points), closed=True))
+# import matplotlib.patches as patches
+
+        #         self.all_annotations = []
+        # self.all_annotations.append(Annotation( name, color, np.array(points), i))
+        # self.patch_polygons = [] self.patch_polygons.append(patches.Polygon(np.array(points), closed=True))
+        #     def reset_annotations(self):
+        # self.annotations = self.all_annotations

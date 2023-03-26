@@ -4,14 +4,14 @@ from test_export import *
 from termcolor import cprint, colored
 
 # CROPPED_IMG DATA CROP 2
-# TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
-# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop2.mat"
-# EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.geojson"
+TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
+MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop2.mat"
+EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.geojson"
 
 # # # # CROPPED_IMG DATA CROP 1
-TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.tif"
-MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop1.mat"
-EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.geojson"
+# TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.tif"
+# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop1.mat"
+# EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.geojson"
 
 #16 DENOISED DATA 16
 # EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-016_10x10_1_Nuclei_Collagen - Denoised.geojson")
@@ -177,7 +177,7 @@ def test_draw_overlay():
 # test_draw_zone_outlines()
 # test_draw_zone_outlines_specific([1,3])
 # test_draw_zone_outlines_specific([0,2])
-test_draw_zone_outlines_specific([0,1,2])
+# test_draw_zone_outlines_specific([0,1,2])
 # test_draw_overlay()
 ############ MANUAL DRAWING/DRAW_HELPER TESTS: ############
 
@@ -264,19 +264,19 @@ if True:
         
         print("AVERAGE WIDTH")
         widths = CTF_OUTPUT.get_fiber_widths()
-        width_avgs = get_average_width_per_zone(widths, bucketed_fibers)
+        width_avgs = get_average_value_per_zone(widths, bucketed_fibers)
         for i in range(4):
             cprint(f"{values[i]} width averages: {width_avgs[i]}", 'green')
             
         print("AVERAGE LENGTHS")
         lengths = CTF_OUTPUT.get_fiber_lengths_thresholded()
-        len_avgs = get_average_length_per_zone(lengths, bucketed_fibers)
+        len_avgs = get_average_value_per_zone(lengths, bucketed_fibers)
         for i in range(4):
             cprint(f"{values[i]} length averages: {len_avgs[i]}", 'yellow')
             
         print("AVERAGE Angles")
         angles = CTF_OUTPUT.get_fiber_angles()
-        len_avgs = get_average_angle_per_zone(angles, bucketed_fibers)
+        len_avgs = get_average_value_per_zone(angles, bucketed_fibers)
         for i in range(4):
             cprint(f"{values[i]} angle averages: {len_avgs[i]}", 'magenta')
 
@@ -296,6 +296,22 @@ if True:
         for i in range(4):
             cprint(f"{values[i]} signal density: {'{0:.2%}'.format(sig_dens[i])}", 'cyan')
 
+    def test_get_signal_density_diff_zones():
+        fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
+        centroids = CTF_OUTPUT.get_centroids()
+        zones = [0,25,50,100]
+        bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.annotations, zones)
+        print(bucketed_fibers.shape)
+        
+        lengths = CTF_OUTPUT.get_fiber_lengths_thresholded()
+        widths = CTF_OUTPUT.get_fiber_widths_thresholded()
+        final_union_of_zones = ANNOTATION_HELPER.get_final_zones(zones)
+        sig_dens = get_signal_density_overall(lengths, widths, final_union_of_zones, bucketed_fibers)
+
+        print("SIGNAL DENSITIES")
+        for i in range(len(zones) + 1):
+            cprint(f"Zone {i} signal density: {'{0:.2%}'.format(sig_dens[i])}", 'cyan')
+    
     def test_get_signal_densities_only_dcis():
         values = ["DCIS", "Epithelial", "Mid-Stromal", "Other Stromal"]
         fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
@@ -328,6 +344,25 @@ if True:
         singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, [0,1,2,3])
         cprint(f"Singal Density Stromal:{'{0:.2%}'.format(singnal_dens_only_stromal)}", 'cyan')
 
+    def test_get_signal_density_only_in_stromal_region_diff_zones():
+        fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
+        centroids = CTF_OUTPUT.get_centroids()
+        bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.annotations, [0, 25, 50, 100] )
+        
+        lengths = CTF_OUTPUT.get_fiber_lengths_thresholded()
+        widths = CTF_OUTPUT.get_fiber_widths_thresholded()
+        final_union_of_zones = ANNOTATION_HELPER.get_final_zones([0, 25, 50, 100])
+        
+        singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, [1,2,3,4])
+        cprint(f"Singal Density Stromal: {'{0:.2%}'.format(singnal_dens_only_stromal)}", 'cyan')
+
+        singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, [0,1,2,3])
+        cprint(f"Singal Density Stromal: {'{0:.2%}'.format(singnal_dens_only_stromal)}", 'cyan')
+        
+        singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, [0,1,2,3,4])
+        cprint(f"Singal Density Stromal: {'{0:.2%}'.format(singnal_dens_only_stromal)}", 'cyan')
+
+
     def test_get_signal_density_per_annotation():
         fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
         centroids = CTF_OUTPUT.get_centroids()
@@ -343,7 +378,9 @@ if True:
 ############## TEST Signal_Densities and Averages per zone  ########
 # test_getting_averages()
 # test_get_signal_densities()
+# test_get_signal_density_diff_zones()
 # test_get_signal_densities_only_dcis()
 # test_get_signal_density_only_in_stromal_region()
+test_get_signal_density_only_in_stromal_region_diff_zones()
 # test_get_signal_density_per_annotation()
 ############## TEST Signal_Densities and Averages per zone  ########

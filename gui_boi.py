@@ -236,7 +236,7 @@ class MainFrame:
                 if(self.draw_zones_textbox.get()):
                     cprint(f'Cancer {self.draw_zones_textbox.get()}', 'cyan')
                     to_draw = self.split_string_to_ints(self.draw_zones_textbox.get())
-                self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw) #  to_draw=[1, 3]
+                self.backend.DRAW_HELPER.draw_zone_outlines(zones, to_draw=to_draw) #  to_draw=[1, 3]
 
     def display_image(self):
         filename = self.img_fileselector.file_text.get()

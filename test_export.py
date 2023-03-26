@@ -69,28 +69,41 @@ class DrawingHelper():
         self.draw_image = ImageDraw.Draw(self.rgbimg)
        
     def _draw_polygon_helper_new(self, polygon, colors, current_depth, to_draw, zone_len):
+        """THIS IS BROKEN ATM"""
         color = colors[current_depth]
         filling = ImageColor.getrgb(color) + (32,)
         lining = ImageColor.getrgb(color) + (64,)
-        print(color, current_depth)
+        if(polygon.area < 10):
+            return
+        print(color, current_depth, int(polygon.area), type(polygon.boundary) == shapely.geometry.MultiLineString)
+        
         if type(polygon.boundary) == shapely.geometry.MultiLineString:            
-            self.draw_image.polygon(list(polygon.exterior.coords), fill=filling)#(255, 0, 0, 100))
+            self.draw_image.polygon(list(polygon.exterior.coords),width=5,outline=lining)#(255, 0, 0, 100))
             for interior in polygon.interiors:
                 new_depth = current_depth + 1
-                print("DEEP", new_depth, colors[new_depth])
                 if(zone_len - new_depth - 1 in to_draw):
+                    print("DEEP", new_depth, colors[new_depth])
                     filling = ImageColor.getrgb(colors[new_depth]) + (32,)
                     lining = ImageColor.getrgb(colors[new_depth]) + (64,)
-                    self.draw_image.polygon(list(interior.coords), fill=filling)#(0, 255, 0, 100))
+                    self.draw_image.polygon(list(interior.coords),width=5, outline=lining)#(0, 255, 0, 100))
                 # else:
                 # Trying to erase bad pieces
                 #     self.draw_image.polygon(list(interior.coords), fill=(255, 255, 255, 0))
+                    self.save_file_overlay('images/penis.tif')
+                    input('Click Enter: ')
+
         else:
             coords = np.array(polygon.exterior.coords).astype('float32')
-            self.draw_image.polygon(coords, width=5, fill=filling, outline=lining)
-    
-           
+            if(zone_len - current_depth - 1 in to_draw or not to_draw):
+                self.draw_image.polygon(coords, width=5, outline=lining)
+            else:
+                pass
+                # self.draw_image.polygon(coords, fill=(255, 255, 255, 0)) # Trying to erase bad pieces
+            self.save_file_overlay('images/penis.tif')
+            # input('Click Enter: ')
+            
     def draw_zones(self, list_of_union_zones, to_draw=[],  colors = COLORS):
+        """THIS IS BROKEN ATM"""
         print(colors)
         list_to_draw = list(to_draw)
         list_of_union_zones = list_of_union_zones[::-1] # Stromal, MID, EPITH, DCIS
@@ -105,11 +118,36 @@ class DrawingHelper():
                 else:
                     self._draw_polygon_helper_new(polygon, colors, i, to_draw, zone_len)
                     
-                    
-        self.image = Image.alpha_composite(self.image, self.rgbimg)
+        self.save_file_overlay('images/penis.tif')
+        # self.image = Image.alpha_composite(self.image, self.rgbimg)
 
-        
-            
+    def draw_zone_outline_helper(self, polygon, colors, current_depth, to_draw):
+        color = colors[current_depth]
+        lining = ImageColor.getrgb(color) + (64,)
+        if type(polygon.boundary) == shapely.geometry.MultiLineString:            
+                self.draw_image.polygon(list(polygon.exterior.coords),width=5,outline=lining)#(255, 0, 0, 100))
+                for interior in polygon.interiors:
+                    new_depth = current_depth + 1
+                    if(new_depth in to_draw):
+                        lining = ImageColor.getrgb(colors[new_depth]) + (64,)
+                        self.draw_image.polygon(list(interior.coords),width=5, outline=lining)#(0, 255, 0, 100))
+                    elif(current_depth in to_draw):
+                        self.draw_image.polygon(list(interior.coords),width=5, outline=lining)#(0, 255, 0, 100))
+        else:
+            coords = np.array(polygon.exterior.coords).astype('float32')
+            self.draw_image.polygon(coords, width=5, outline=lining)
+
+    def draw_zone_outlines(self, list_of_union_zones, to_draw=[],  colors = COLORS):
+        to_draw = list(to_draw)
+        for i in range(len(list_of_union_zones)):
+            union_poly = list_of_union_zones[i]
+            if((not to_draw or i in to_draw) and union_poly.area > 0):
+                if(type(union_poly) == shapely.geometry.multipolygon.MultiPolygon):
+                    for polygon in union_poly.geoms:
+                        self.draw_zone_outline_helper(polygon, colors, i, to_draw)
+                else:
+                    self.draw_zone_outline_helper(union_poly, colors, i, to_draw)
+    
     def _convert_grayscale_tif_to_color(self):
         self.image = Image.open(self.tif_file, 'r').convert('RGBA')
         rgbimg = Image.new("RGBA", self.image.size)
@@ -305,7 +343,6 @@ class GUI_Helper():
         return fibers_bucketed
         # return fibers_bucketed[0:len(centroids)]
 
-  
 @print_function_dec
 def bucket_the_fibers(fibers, centroids, annotations, buckets=np.array([0, 50, 150])):
     """Buckets Each fiber into an annotation for every annotation"""

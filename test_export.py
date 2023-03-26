@@ -69,28 +69,41 @@ class DrawingHelper():
         self.draw_image = ImageDraw.Draw(self.rgbimg)
        
     def _draw_polygon_helper_new(self, polygon, colors, current_depth, to_draw, zone_len):
+        """THIS IS BROKEN ATM"""
         color = colors[current_depth]
         filling = ImageColor.getrgb(color) + (32,)
         lining = ImageColor.getrgb(color) + (64,)
-        print(color, current_depth)
+        if(polygon.area < 10):
+            return
+        print(color, current_depth, int(polygon.area), type(polygon.boundary) == shapely.geometry.MultiLineString)
+        
         if type(polygon.boundary) == shapely.geometry.MultiLineString:            
-            self.draw_image.polygon(list(polygon.exterior.coords), fill=filling)#(255, 0, 0, 100))
+            self.draw_image.polygon(list(polygon.exterior.coords), width=5,outline=lining)#(255, 0, 0, 100))
             for interior in polygon.interiors:
                 new_depth = current_depth + 1
-                print("DEEP", new_depth, colors[new_depth])
                 if(zone_len - new_depth - 1 in to_draw):
+                    print("DEEP", new_depth, colors[new_depth])
                     filling = ImageColor.getrgb(colors[new_depth]) + (32,)
                     lining = ImageColor.getrgb(colors[new_depth]) + (64,)
-                    self.draw_image.polygon(list(interior.coords), fill=filling)#(0, 255, 0, 100))
+                    self.draw_image.polygon(list(interior.coords), width=5, outline=lining)#(0, 255, 0, 100))
                 # else:
                 # Trying to erase bad pieces
                 #     self.draw_image.polygon(list(interior.coords), fill=(255, 255, 255, 0))
+                    self.save_file_overlay('images/penis.tif')
+                    input('Click Enter: ')
+
         else:
             coords = np.array(polygon.exterior.coords).astype('float32')
-            self.draw_image.polygon(coords, width=5, fill=filling, outline=lining)
-    
-           
+            if(zone_len - current_depth - 1 in to_draw or not to_draw):
+                self.draw_image.polygon(coords, width=5, outline=lining)
+            else:
+                pass
+                # self.draw_image.polygon(coords, fill=(255, 255, 255, 0)) # Trying to erase bad pieces
+            self.save_file_overlay('images/penis.tif')
+            # input('Click Enter: ')
+            
     def draw_zones(self, list_of_union_zones, to_draw=[],  colors = COLORS):
+        """THIS IS BROKEN ATM"""
         print(colors)
         list_to_draw = list(to_draw)
         list_of_union_zones = list_of_union_zones[::-1] # Stromal, MID, EPITH, DCIS
@@ -105,11 +118,37 @@ class DrawingHelper():
                 else:
                     self._draw_polygon_helper_new(polygon, colors, i, to_draw, zone_len)
                     
-                    
-        self.image = Image.alpha_composite(self.image, self.rgbimg)
+        self.save_file_overlay('images/penis.tif')
+        # self.image = Image.alpha_composite(self.image, self.rgbimg)
 
-        
-            
+    def draw_zone_outline_helper(self, polygon, colors, current_depth, to_draw):
+        color = colors[current_depth]
+        lining = ImageColor.getrgb(color) + (128,)
+        width_size = int(self.image.size[0] / 100)
+        if type(polygon.boundary) == shapely.geometry.MultiLineString:            
+                self.draw_image.polygon(list(polygon.exterior.coords), width=width_size, outline=lining)
+                for interior in polygon.interiors:
+                    new_depth = current_depth + 1
+                    if(new_depth in to_draw):
+                        lining = ImageColor.getrgb(colors[new_depth]) + (128,)
+                        self.draw_image.polygon(list(interior.coords), width=width_size, outline=lining)
+                    elif(current_depth in to_draw):
+                        self.draw_image.polygon(list(interior.coords), width=width_size, outline=lining)
+        else:
+            coords = np.array(polygon.exterior.coords).astype('float32')
+            self.draw_image.polygon(coords, width=width_size, outline=lining)
+
+    def draw_zone_outlines(self, list_of_union_zones, to_draw=[],  colors = COLORS):
+        to_draw = list(to_draw)
+        for i in range(len(list_of_union_zones)):
+            union_poly = list_of_union_zones[i]
+            if((not to_draw or i in to_draw) and union_poly.area > 0):
+                if(type(union_poly) == shapely.geometry.multipolygon.MultiPolygon):
+                    for polygon in union_poly.geoms:
+                        self.draw_zone_outline_helper(polygon, colors, i, to_draw)
+                else:
+                    self.draw_zone_outline_helper(union_poly, colors, i, to_draw)
+    
     def _convert_grayscale_tif_to_color(self):
         self.image = Image.open(self.tif_file, 'r').convert('RGBA')
         rgbimg = Image.new("RGBA", self.image.size)
@@ -141,7 +180,7 @@ class DrawingHelper():
             )
         
         self.image = Image.alpha_composite(self.image, self.rgbimg)
-        
+
     @print_function_dec
     def draw_overlay(self, draw_functions):
         for draw_function in draw_functions:
@@ -305,7 +344,6 @@ class GUI_Helper():
         return fibers_bucketed
         # return fibers_bucketed[0:len(centroids)]
 
-  
 @print_function_dec
 def bucket_the_fibers(fibers, centroids, annotations, buckets=np.array([0, 50, 150])):
     """Buckets Each fiber into an annotation for every annotation"""
@@ -341,11 +379,14 @@ def get_signal_density_per_annotation(bucketed_fibers_annotation_indexed, annota
     final_density = np.sum(length_of_fibs_in_anno * width_of_fibs_in_anno)
     return final_density / annotation.geo_polygon.area
     
-def get_fiber_area_per_zone(lengths, widths, bucketed_fibers):
+def get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones):
     labeled_fibers = bucketed_fibers.min(axis=1)
-    
-    actual_counts = {0: 0, 1: 0, 2: 0, 3: 0} 
-    final_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+    final_counts = {}
+    actual_counts = {}
+    for i in range(len_of_zones):
+        actual_counts[i] = 0
+        final_counts[i] = 0
+
     for i in range(len(bucketed_fibers)):
         final_counts[labeled_fibers[i]] +=  lengths[i] * widths[i]
         actual_counts[labeled_fibers[i]] +=  1
@@ -365,69 +406,74 @@ def get_signal_density_per_zone(final_union_of_zones, final_counts):
 
 def get_signal_density_overall(lengths, widths, final_union_of_zones,  bucketed_fibers):
     #FOR BUCKETED FIBERS:  0 is annotation, 1 is epith, 2 is mid, 3 is stromal
-    final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers)
+    len_of_zones = len(final_union_of_zones)
+    final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones)
     return get_signal_density_per_zone(final_union_of_zones, final_counts)
 
 def get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, zones):
-    final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers)
+    final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len(final_union_of_zones))
     final_area = 0
     final_density = 0
     
     total_area = 0
     total_density = 0
-    for i, zone in enumerate(reversed(final_union_of_zones)):
-        zone_index = len(final_union_of_zones) - i - 1
-        print(f"Zone {zone_index}: {zone.area}")
+    for i, zone in enumerate(final_union_of_zones):
         total_area += zone.area
-        total_density += final_counts[zone_index]
+        total_density += final_counts[i]
         
-        if(zone_index in zones):
+        if(i in zones):
            final_area += zone.area
-           final_density += final_counts[zone_index]
+           final_density += final_counts[i]
     
     return final_density / final_area
 
-def get_average_width_per_zone(widths, bucketed_fibers):
+def get_average_value_per_zone(values, bucketed_fibers, num_of_zones = 4):
     labeled_fibers = bucketed_fibers.min(axis=1)
-    final_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+    final_counts = {}
+    for i in range(num_of_zones):
+        final_counts[i] = 0
 
-    for i in range(4):
-        labeled_widths = widths[np.where(labeled_fibers == i)]
-        if(not labeled_widths.any()):
+    for i in range(num_of_zones):
+        labeled_values = values[np.where(labeled_fibers == i)]
+        if(not labeled_values.any()):
             width_mean = 0
         else:
-            width_mean =  np.mean(labeled_widths)
+            width_mean =  np.mean(labeled_values)
         final_counts[i] = width_mean 
 
     return final_counts
 
-def get_average_length_per_zone(lengths, bucketed_fibers):
-    labeled_fibers = bucketed_fibers.min(axis=1)
-    final_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+# def get_average_length_per_zone(lengths, bucketed_fibers, num_of_zones = 4):
+#     labeled_fibers = bucketed_fibers.min(axis=1)
+#     final_counts = {}
+#     for i in range(num_of_zones):
+#         final_counts[i] = 0
+        
+#     for i in range(num_of_zones):
+#         labeled_lengths = lengths[np.where(labeled_fibers == i)]
+#         if(not labeled_lengths.any()):
+#             width_mean = 0
+#         else:
+#             width_mean =  np.mean(labeled_lengths)
+#         final_counts[i] = width_mean 
 
-    for i in range(4):
-        labeled_lengths = lengths[np.where(labeled_fibers == i)]
-        if(not labeled_lengths.any()):
-            width_mean = 0
-        else:
-            width_mean =  np.mean(labeled_lengths)
-        final_counts[i] = width_mean 
+#     return final_counts
 
-    return final_counts
+# def get_average_angle_per_zone(angles, bucketed_fibers, num_of_zones = 4):
+#     labeled_fibers = bucketed_fibers.min(axis=1)
+#     final_counts = {}
+#     for i in range(num_of_zones):
+#         final_counts[i] = 0
+            
+#     for i in range(num_of_zones):
+#         labeled_angles = angles[np.where(labeled_fibers == i)]
+#         if(not labeled_angles.any()):
+#             width_mean = 0
+#         else:
+#             width_mean =  np.mean(labeled_angles)
+#         final_counts[i] = width_mean 
 
-def get_average_angle_per_zone(angles, bucketed_fibers):
-    labeled_fibers = bucketed_fibers.min(axis=1)
-    final_counts = {0: 0, 1: 0, 2: 0, 3: 0}
-    
-    for i in range(4):
-        labeled_angles = angles[np.where(labeled_fibers == i)]
-        if(not labeled_angles.any()):
-            width_mean = 0
-        else:
-            width_mean =  np.mean(labeled_angles)
-        final_counts[i] = width_mean 
-
-    return final_counts
+#     return final_counts
 
 if __name__ == '__main__':
     pass

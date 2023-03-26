@@ -72,7 +72,7 @@ class MainFrame:
         self.geojson_fileselector = FileSelector(self.fileselector_frame, "Upload GeoJson...", 2, GEOJSON_FILETYPES)
         
         # Create a button to display the UNEDITED image
-        self.display_button = tk.Button(self.fileselector_frame, text='Display Unedited Image', command=self.display_image)
+        self.display_button = tk.Button(self.fileselector_frame, text='Display Unedited Image', command=self.display_unedited_image)
         self.display_button.grid(row=0, column=4, padx=5, pady=5)
         
         # Create a button to set the GUI_Helper Object
@@ -236,7 +236,7 @@ class MainFrame:
                 if(self.draw_zones_textbox.get()):
                     cprint(f'Cancer {self.draw_zones_textbox.get()}', 'cyan')
                     to_draw = self.split_string_to_ints(self.draw_zones_textbox.get())
-                self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw) #  to_draw=[1, 3]
+                self.backend.DRAW_HELPER.draw_zone_outlines(zones, to_draw=to_draw) #  to_draw=[1, 3]
 
     def display_image(self):
         filename = self.img_fileselector.file_text.get()
@@ -245,6 +245,12 @@ class MainFrame:
             self.newWindow = tk.Toplevel(self.master)
             self.app = ImageWindow(self.newWindow, image=self.backend.DRAW_HELPER.get_image())
         elif filename:
+            self.newWindow = tk.Toplevel(self.master)
+            self.app = ImageWindow(self.newWindow, filename)
+    
+    def display_unedited_image(self):
+        filename = self.img_fileselector.file_text.get()
+        if filename:
             self.newWindow = tk.Toplevel(self.master)
             self.app = ImageWindow(self.newWindow, filename)
 
@@ -273,37 +279,47 @@ class MainFrame:
             else:
                 annotations_to_use = self.backend.ANNOTATION_HELPER.annotations
             
+            zone_boundaries = [0, 50, 150]
+            if(self.csv_boundaries_textbox.get()):
+                zone_boundaries = self.split_string_to_ints(self.csv_boundaries_textbox.get())
+            
             def bucket_fibers():
-                self.backend.bucket_the_fibers(fibers, centroids, annotations_to_use)
+                self.backend.bucket_the_fibers(fibers, centroids, annotations_to_use, zone_boundaries)
                 self.bucket_fibers_label.config(text='Fibers currently BUCKETED!', fg= "green")
                 self.widgets_to_display_after_bucketing()
                 
             threading.Thread(target=bucket_fibers).start() 
 
     def calc_averages(self):
+        zone_boundaries = [0, 50, 150]
+        if(self.csv_boundaries_textbox.get()):
+            zone_boundaries = self.split_string_to_ints(self.csv_boundaries_textbox.get())
+        zone_bound_len = len(zone_boundaries) + 1
+        
         print("Calcing Averages")
         widths = self.backend.CTF_OUTPUT.get_fiber_widths()
-        width_avgs = get_average_width_per_zone(widths, self.backend.bucketed_fibers)
+        width_avgs = get_average_value_per_zone(widths, self.backend.bucketed_fibers, zone_bound_len)
         width_avg_str = "Width Averages: \n"
-        for i in range(4):
+
+        print(f"HERE IS THE ZONE BOUNDARY: {zone_boundaries, self.csv_boundaries_textbox.get()}")
+        
+        for i in range(zone_bound_len):
             width_avg_str+=f"\t Zone {i} width averages: {width_avgs[i]}\n"
         width_avg_str+=f"\t Total Average Width {np.mean(widths)}\n"
-        
         msg_box.showinfo("Width Info", width_avg_str)
 
         lengths = self.backend.CTF_OUTPUT.get_fiber_lengths_thresholded()
-        len_avgs = get_average_length_per_zone(lengths, self.backend.bucketed_fibers)
+        len_avgs = get_average_value_per_zone(lengths, self.backend.bucketed_fibers, zone_bound_len)
         len_avg_str = "Length Averages: \n"
-        for i in range(4):
+        for i in range(zone_bound_len):
             len_avg_str+=f"\t Zone {i} length averages: {len_avgs[i]}\n"
         len_avg_str+=f"\t Total Average Length {np.mean(lengths)}\n"
-        
         msg_box.showinfo("Length Info", len_avg_str)
             
         angles = self.backend.CTF_OUTPUT.get_fiber_angles()
-        ang_avgs = get_average_angle_per_zone(angles, self.backend.bucketed_fibers)
+        ang_avgs = get_average_value_per_zone(angles, self.backend.bucketed_fibers, zone_bound_len)
         ang_avg_str = "Angle Averages: \n"
-        for i in range(4):
+        for i in range(zone_bound_len):
             ang_avg_str+=f"\t Zone {i} angle averages: {ang_avgs[i]}\n"
         ang_avg_str+=f"\t Total Average Angle {np.mean(angles)}\n"
         
@@ -320,16 +336,18 @@ class MainFrame:
         
         zone_boundaries = [0, 50, 150]
         if(self.csv_boundaries_textbox.get()):
-            zone_boundaries =  self.split_string_to_ints(self.draw_fibers_textbox.get())
+            zone_boundaries =  self.split_string_to_ints(self.csv_boundaries_textbox.get())
         
         annotations_to_use = []
         if self.bucket_fibers_textbox.get():
             annotations_to_use = [x.strip() for x in self.bucket_fibers_textbox.get().split(',')]
         
+        print(f"{zone_boundaries, len(annotations_to_use)}")
+        
         zones = self.backend.ANNOTATION_HELPER.get_final_zones(zone_boundaries, annotations_to_use)
         sig_dens = get_signal_density_overall(lengths, widths, zones, self.backend.bucketed_fibers)
         sig_dens_str = "\nSignal Densities:"
-        for i in range(4):
+        for i in range(len(zone_boundaries) + 1):
             sig_dens_str+= f"\n\tZone {i}: signal density: {'{0:.2%}'.format(sig_dens[i])}"
         
         msg_box.showinfo("Signla Density Info", sig_dens_str)
@@ -342,7 +360,7 @@ class MainFrame:
         
         zone_boundaries = [0, 50, 150]
         if(self.csv_boundaries_textbox.get()):
-            zone_boundaries =  self.split_string_to_ints(self.draw_fibers_textbox.get())
+            zone_boundaries =  self.split_string_to_ints(self.csv_boundaries_textbox.get())
         
         annotations_to_use = []
         if self.bucket_fibers_textbox.get():
@@ -420,8 +438,6 @@ def main():
     menu_window = MainFrame(root)
     root.mainloop()
     
-
 if __name__ == '__main__':
     main()
     
-

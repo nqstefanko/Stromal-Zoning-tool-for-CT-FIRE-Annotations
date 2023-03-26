@@ -3,22 +3,22 @@ from annotation_helper import AnnotationHelper
 from test_export import *
 from termcolor import cprint, colored
 
-# # CROPPED_IMG DATA CROP 2
-# TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
-# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop2.mat"
-# EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.geojson"
+# CROPPED_IMG DATA CROP 2
+TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.tif"
+MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop2.mat"
+EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop2.geojson"
 
-# CROPPED_IMG DATA CROP 1
-TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.tif"
-MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop1.mat"
-EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.geojson"
+# # # # CROPPED_IMG DATA CROP 1
+# TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.tif"
+# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop1.mat"
+# EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.geojson"
 
 #16 DENOISED DATA 16
 # EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-016_10x10_1_Nuclei_Collagen - Denoised.geojson")
 # TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-016_10x10_1_Nuclei_Collagen - Denoised.tif")
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\ctFIREout\ctFIREout_DCIS-016_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
-# #18 DENOISED DATA 18
+# # #18 DENOISED DATA 18
 # EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
 # TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
@@ -30,8 +30,6 @@ CTF_OUTPUT = CTFIREOutputHelper(MAT_FILEPATH)
 DRAW_HELPER = DrawingHelper(TIF_FILEPATH)
 ANNOTATION_HELPER = AnnotationHelper(EXPORTED_ANNOTATION_FILEPATH, IMG_DIMS)
 PLOT_HELPER = PlottingHelper(tif_file=TIF_FILEPATH)
-
-# plt.ion()
 
 def test_plot_annotations():
     PLOT_HELPER._plot_annotations(ANNOTATION_HELPER.annotations)
@@ -46,16 +44,10 @@ def test_plot_annotations_of_correct_name():
     PLOT_HELPER.show_plot()
     PLOT_HELPER.reset()
     
-    ANNOTATION_HELPER.set_annotations(['Ignore'])
-    PLOT_HELPER._plot_annotations(ANNOTATION_HELPER.annotations)
+    PLOT_HELPER._plot_annotations(ANNOTATION_HELPER.get_specific_annotations(['Ignore']))
     PLOT_HELPER.show_plot()
     PLOT_HELPER.reset()
-    
-    ANNOTATION_HELPER.reset_annotations()
-    PLOT_HELPER._plot_annotations(ANNOTATION_HELPER.annotations)
-    PLOT_HELPER.show_plot()
-    PLOT_HELPER.reset()
-    
+
 def test_plot_annotations_with_indexes():
     PLOT_HELPER._plot_annotations(ANNOTATION_HELPER.annotations, plot_anno_indexes=True)
     PLOT_HELPER.show_plot()
@@ -70,23 +62,34 @@ def test_plot_fibers():
     PLOT_HELPER._plot_fibers(verts)
     PLOT_HELPER.show_plot()
     
-def test_plot_zones():
-    list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 20, 40, 60, 80])))
+def test_plot_zones(zones=[0, 50, 150]):
+    cprint("\nPlotting all zones...", 'cyan')
+    list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting(zones)
     PLOT_HELPER._plot_zones(list_of_union_zones)
     PLOT_HELPER.show_plot()
+    PLOT_HELPER.reset()
+
+def test_plot_specific_zones(zones=[0, 50, 150], to_plot=[1, 3]):
+    cprint("\nPlotting just zones 1, 3 zones...", 'cyan')
+    list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting(zones)
+    PLOT_HELPER._plot_zones(list_of_union_zones, to_plot)
+    PLOT_HELPER.show_plot()
+    PLOT_HELPER.reset()
 
 def test_plot_overlay():
     verts = CTF_OUTPUT.get_fiber_vertices_thresholded()
     annos = ANNOTATION_HELPER.annotations
-    list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150])))
+    list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150])
     
+    cprint("\nPlotting all entire overlay without saving...", 'cyan')
     PLOT_HELPER.plot_final_overlay(verts, annos, list_of_union_zones) # Annotations on Bottom 
     PLOT_HELPER.show_plot()
     PLOT_HELPER.reset()
     
     # TODO: NEED TO TEST WITH ANNOTATIONS ON TOP
-    
-    PLOT_HELPER.plot_final_overlay(verts, annos, list_of_union_zones, save_plot_as_img='boobies.tif')
+    file_to_save = "images/boobies.tif"
+    cprint(f"\nPlotting all entire overlay with saving to {file_to_save}...", 'cyan')
+    PLOT_HELPER.plot_final_overlay(verts, annos, list_of_union_zones, save_plot_as_img=file_to_save)
     PLOT_HELPER.show_plot()
 
 ############ MANUAL PLOTTING/PLOT_HELPER TESTS: ############
@@ -95,6 +98,7 @@ def test_plot_overlay():
 # test_plot_annotations_with_indexes()
 # test_plot_fibers()
 # test_plot_zones()
+# test_plot_specific_zones()
 # test_plot_overlay()
 ############ MANUAL PLOTTING/PLOT_HELPER TESTS: ############
 
@@ -120,9 +124,15 @@ def test_all_draw_fibers():
     DRAW_HELPER.save_file_overlay('images/penis.tif')
 
 def test_draw_zones():
-    zones = list(reversed(ANNOTATION_HELPER.get_final_zones([0, 20, 40, 60, 80])))
-    to_draw = np.arange(len(zones))
-    DRAW_HELPER.draw_zones(zones, to_draw=to_draw)
+    zones = ANNOTATION_HELPER.get_final_zones([0, 25, 50, 100])
+    # zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150])
+    DRAW_HELPER.draw_zones(zones)
+    DRAW_HELPER.save_file_overlay('images/penis.tif')
+    
+def test_draw_specific_zones(to_draw=[]):
+    zones = ANNOTATION_HELPER.get_final_zones([0, 25, 50, 100])
+    # zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150])
+    DRAW_HELPER.draw_zones(zones, to_draw)
     DRAW_HELPER.save_file_overlay('images/penis.tif')
     
 def test_draw_overlay():
@@ -145,25 +155,35 @@ def test_draw_overlay():
 # test_draw_annotations_with_indexes()
 # test_draw_fibers()
 # test_all_draw_fibers()
-test_draw_zones()
-test_plot_zones()
+# test_draw_zones()
 
+# test_draw_specific_zones([1,2,3])
+# test_draw_specific_zones([0,3])
+# test_draw_specific_zones([0,1,2])
+# test_draw_specific_zones([1,3])
+test_draw_specific_zones([1,2])
 # test_draw_overlay()
 ############ MANUAL DRAWING/DRAW_HELPER TESTS: ############
+
+# test_plot_zones([0, 25, 50, 100])
+test_plot_specific_zones([0, 25, 50, 100], [1,2])
+###############
 
 def test_draw_fibers_per_zone_single_zone():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
     centroids = CTF_OUTPUT.get_centroids()
-
     bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.annotations)    
     DRAW_HELPER.draw_annotations(ANNOTATION_HELPER.annotations,  draw_anno_indexes = False)
 
-    zones = list(reversed(ANNOTATION_HELPER.get_final_zones([0, 50, 150])))
-    DRAW_HELPER.draw_zones(zones, to_draw=[1, 2])
+    zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150])
+    # zones_to_draw = [1,2]
+    zones_to_draw = [0,3]
+    
+    DRAW_HELPER.draw_zones(zones, zones_to_draw)
     
     verts = CTF_OUTPUT.get_fiber_vertices_thresholded()
     widths = CTF_OUTPUT.get_fiber_widths_thresholded()
-    DRAW_HELPER.draw_fibers_per_zone(verts, widths, bucketed_fibers, [1, 2])
+    DRAW_HELPER.draw_fibers_per_zone(verts, widths, bucketed_fibers, zones_to_draw)
 
     final_path = os.path.join(sys.path[0], 'images/penis.tif')
     composite_image = Image.alpha_composite(DRAW_HELPER.image, DRAW_HELPER.rgbimg)
@@ -172,10 +192,9 @@ def test_draw_fibers_per_zone_single_zone():
 def test_draw_fibers_per_zone_single_zone_only_dcis():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
     centroids = CTF_OUTPUT.get_centroids()
-
-    # DRAW_HELPER.draw_annotations(ANNOTATION_HELPER.annotations, 'bongbong.tif', draw_anno_indexes = False)
-    zones = list(reversed(ANNOTATION_HELPER.get_final_zones([0, 50, 150], ['DCIS'])))
-    DRAW_HELPER.draw_zones(zones, to_draw=[0,1,2,3])
+    # DRAW_HELPER.draw_annotations(ANNOTATION_HELPER.annotations, draw_anno_indexes = False)
+    zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150], ['DCIS'])
+    DRAW_HELPER.draw_zones(zones)
 
     bucketed_fibers = bucket_the_fibers(fibers, centroids, ANNOTATION_HELPER.get_specific_annotations(['DCIS']))    
     verts = CTF_OUTPUT.get_fiber_vertices_thresholded()
@@ -194,7 +213,7 @@ def test_plot_fibers_per_zone_single_zone():
     verts = CTF_OUTPUT.get_fiber_vertices_thresholded()
     for i in range(4):
         PLOT_HELPER._plot_fibers_per_zone(verts, bucketed_fibers, [i])
-        list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150])))
+        list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150])
         PLOT_HELPER._plot_zones(list_of_union_zones)
         PLOT_HELPER.show_plot()
         PLOT_HELPER.reset()
@@ -208,7 +227,7 @@ def test_plot_fibers_per_zone_single_zone_only_dcis():
     verts = CTF_OUTPUT.get_fiber_vertices_thresholded()
     for i in range(4):
         PLOT_HELPER._plot_fibers_per_zone(verts, bucketed_fibers, [i])
-        list_of_union_zones = list(reversed(ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150], ['DCIS'])))
+        list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150], ['DCIS'])
         PLOT_HELPER._plot_zones(list_of_union_zones)
         PLOT_HELPER.show_plot()
         PLOT_HELPER.reset()
@@ -219,6 +238,7 @@ def test_plot_fibers_per_zone_single_zone_only_dcis():
 # test_plot_fibers_per_zone_single_zone()
 # test_plot_fibers_per_zone_single_zone_only_dcis()
 ############## TEST Plotting/Drawing per zone  ########
+
 def test_getting_averages():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
     centroids = CTF_OUTPUT.get_centroids()
@@ -286,7 +306,10 @@ def test_get_signal_density_only_in_stromal_region():
     final_union_of_zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150])
      
     singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, [1,2,3])
-    cprint(f"Singal Density Stromal: {singnal_dens_only_stromal}", 'magenta')
+    cprint(f"Singal Density Stromal:{'{0:.2%}'.format(singnal_dens_only_stromal)}", 'cyan')
+
+    singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, [0,1,2,3])
+    cprint(f"Singal Density Stromal:{'{0:.2%}'.format(singnal_dens_only_stromal)}", 'cyan')
 
 def test_get_signal_density_per_annotation():
     fibers = CTF_OUTPUT.get_fiber_vertices_thresholded()
@@ -297,9 +320,8 @@ def test_get_signal_density_per_annotation():
     widths = CTF_OUTPUT.get_fiber_widths_thresholded()
     # For the 2nd annotation
     sig_dens = get_signal_density_per_annotation(bucketed_fibers[:, 1], ANNOTATION_HELPER.annotations[1], lengths, widths)
+    cprint(f"Singal Density For Annotation:{'{0:.2%}'.format(sig_dens)}", 'cyan')
     
-    print(f"FINAL Sig Dens: {sig_dens}")
-
 
 ############## TEST Signal_Densities and Averages per zone  ########
 # test_getting_averages()

@@ -40,7 +40,10 @@ EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_1
 TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
 MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
-COLORS = ['cyan', 'green', 'magenta', 'red', 'yellow', 'blue', 'white', 'orange', 'pink', 'brown']
+# COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue', 'orange', 'pink', 'brown']
+COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue']
+# COLORS = [ 'cyan', 'white', 'blue','green','magenta']
+
 with Image.open(TIF_FILEPATH) as img:
     IMG_DIMS = img.size
 
@@ -64,53 +67,48 @@ class DrawingHelper():
         self.tif_file = tif_file
         self.rgbimg =  self._convert_grayscale_tif_to_color()
         self.draw_image = ImageDraw.Draw(self.rgbimg)
-    def _draw_polygon_helper(self, polygon, color):
-        "NOTE: TECHNICALLY THIS IS NOT CORRECT YET BECAUSE DRAWING OVER WITH ALPHA 0 STILL DRAWS OVER WHAT IS THERE."
-        if type(polygon.boundary) == shapely.geometry.MultiLineString:
-            if len(polygon.boundary.geoms) > 0:
-                filling = ImageColor.getrgb(color) + (32,)
-                lining = ImageColor.getrgb(color) + (64,)
-                geom = polygon.boundary.geoms[0]
-                coords =  geom.coords.xy[0]
-                ext_x_coords = np.array(polygon.boundary.geoms[0].coords.xy[0]).astype('float32')
-                ext_y_coords = np.array(polygon.boundary.geoms[0].coords.xy[1]).astype('float32')
-                final_ext = np.vstack((ext_x_coords, ext_y_coords)).T.flatten()
-                print(f"Drawing Multiline Polygon: {color}")
-                self.draw_image.polygon(final_ext, width=5, fill=filling, outline=lining)
-
-                for i in range(len(polygon.boundary.geoms)-1):
-                    geo = polygon.boundary.geoms[i+1]
-                    int_x_coords = np.array(geo.coords.xy[0]).astype('float32')
-                    int_y_coords = np.array(geo.coords.xy[1]).astype('float32')
-                    final_int = np.vstack((int_x_coords, int_y_coords)).T.flatten()
-                    print(f"ERASING Multiline Polygon: {color}")
-                    self.draw_image.polygon(final_int, width=5, outline=lining, fill=(255, 255, 255, 0))
-                
+       
+    def _draw_polygon_helper_new(self, polygon, colors, current_depth, to_draw, zone_len):
+        color = colors[current_depth]
+        filling = ImageColor.getrgb(color) + (32,)
+        lining = ImageColor.getrgb(color) + (64,)
+        print(color, current_depth)
+        if type(polygon.boundary) == shapely.geometry.MultiLineString:            
+            self.draw_image.polygon(list(polygon.exterior.coords), fill=filling)#(255, 0, 0, 100))
+            for interior in polygon.interiors:
+                new_depth = current_depth + 1
+                print("DEEP", new_depth, colors[new_depth])
+                if(zone_len - new_depth - 1 in to_draw):
+                    filling = ImageColor.getrgb(colors[new_depth]) + (32,)
+                    lining = ImageColor.getrgb(colors[new_depth]) + (64,)
+                    self.draw_image.polygon(list(interior.coords), fill=filling)#(0, 255, 0, 100))
+                # else:
+                # Trying to erase bad pieces
+                #     self.draw_image.polygon(list(interior.coords), fill=(255, 255, 255, 0))
         else:
-            print(f"Drawing Polygon: {color}")
             coords = np.array(polygon.exterior.coords).astype('float32')
-            filling = ImageColor.getrgb(color) + (32,)
-            lining = ImageColor.getrgb(color) + (64,)
             self.draw_image.polygon(coords, width=5, fill=filling, outline=lining)
     
-    def _draw_helper(self, final_union_poly, color):
-        if(type(final_union_poly) == shapely.geometry.multipolygon.MultiPolygon):
-            for polygon in final_union_poly.geoms:
-                self._draw_helper(polygon, color)
-        else:
-            self._draw_polygon_helper(final_union_poly, color) 
-
-    
+           
     def draw_zones(self, list_of_union_zones, to_draw=[],  colors = COLORS):
+        print(colors)
         list_to_draw = list(to_draw)
-        # for i in range(len(list_of_union_zones)):
-        for i in reversed(range(len(list_of_union_zones))):
-            # 0 is Stromal, 1 is mid, 2 is epith, 3 is annotation itself
-            if((not list_to_draw or i in list_to_draw) and list_of_union_zones[i].area > 0):
+        list_of_union_zones = list_of_union_zones[::-1] # Stromal, MID, EPITH, DCIS
+        for i in range(len(list_of_union_zones)):
+            zone_len =  len(list_of_union_zones) 
+            ind = zone_len -  1 - i # 3,2,1,0 [1,3]
+            if((not list_to_draw or ind in list_to_draw) and list_of_union_zones[i].area > 0):
                 final_union_zone_polygon = list_of_union_zones[i]
-                cprint(f"{i, f'{final_union_zone_polygon.area:,}', colors[i]}", colors[i])
-                self._draw_helper(final_union_zone_polygon, colors[i]) 
+                if(type(final_union_zone_polygon) == shapely.geometry.multipolygon.MultiPolygon):
+                    for polygon in final_union_zone_polygon.geoms:
+                        self._draw_polygon_helper_new(polygon, colors, i, to_draw, zone_len)
+                else:
+                    self._draw_polygon_helper_new(polygon, colors, i, to_draw, zone_len)
+                    
+                    
         self.image = Image.alpha_composite(self.image, self.rgbimg)
+
+        
             
     def _convert_grayscale_tif_to_color(self):
         self.image = Image.open(self.tif_file, 'r').convert('RGBA')
@@ -144,7 +142,6 @@ class DrawingHelper():
         
         self.image = Image.alpha_composite(self.image, self.rgbimg)
         
-        
     @print_function_dec
     def draw_overlay(self, draw_functions):
         for draw_function in draw_functions:
@@ -154,6 +151,7 @@ class DrawingHelper():
         return Image.alpha_composite(self.image, self.rgbimg)
 
     def save_file_overlay(self, final_path_to_save='bong_overlayed.tif'):
+        cprint(f"Saving Overlay to {final_path_to_save}...", 'cyan')
         final_path = os.path.join(sys.path[0], final_path_to_save)
         composite_image = Image.alpha_composite(self.image, self.rgbimg)
         composite_image.save(final_path)
@@ -276,7 +274,8 @@ class GUI_Helper():
         self.CTF_OUTPUT = CTFIREOutputHelper(mat_filepath)
         self.DRAW_HELPER = DrawingHelper(tif_filepath)
         self.ANNOTATION_HELPER = AnnotationHelper(annotation_filepath, self.DRAW_HELPER.image.size)
-
+        self.bucketed_fibers = None
+    
     @print_function_dec
     def bucket_the_fibers(self, fibers, centroids, annotations, buckets=np.array([0, 50, 150])):
         """Buckets Each fiber into an annotation for every annotation"""
@@ -325,7 +324,7 @@ def bucket_the_fibers(fibers, centroids, annotations, buckets=np.array([0, 50, 1
             g_poly = annotation.geo_polygon
             poly_distances[j] = g_poly.exterior.distance(centroid_point)
             
-            if (g_poly.contains(centroid_point) or g_poly.contains(fiber_linestring)):  # Could use fiber_linestring but much more restrictive
+            if (g_poly.contains(centroid_point)):  # Could use fiber_linestring but much more restrictive  or g_poly.contains(fiber_linestring)
                 poly_distances[j] = -1
 
             if(fiber_linestring.crosses(g_poly)):
@@ -333,7 +332,6 @@ def bucket_the_fibers(fibers, centroids, annotations, buckets=np.array([0, 50, 1
         bucket_fibers = np.digitize(poly_distances, buckets, right=True).astype(int)
         fibers_bucketed[i] = bucket_fibers
     return fibers_bucketed
-    # return fibers_bucketed[0:len(centroids)]
 
 @print_function_dec
 def get_signal_density_per_annotation(bucketed_fibers_annotation_indexed, annotation, lengths, widths):
@@ -356,16 +354,18 @@ def get_fiber_area_per_zone(lengths, widths, bucketed_fibers):
 
 def get_signal_density_per_zone(final_union_of_zones, final_counts):
     final_densities = []
-    for i, zone in enumerate(reversed(final_union_of_zones)):
+    for i, zone in enumerate(final_union_of_zones):
         # print(f"Zone {len(final_union_of_zones) - i - 1}: {zone.area}")
-        final_densities.append(final_counts[len(final_union_of_zones) - i - 1] / zone.area)
+        if(zone.area > 0):
+            final_densities.append(final_counts[i] / zone.area)
+        else:
+            final_densities.append(0)
+
     return final_densities
 
 def get_signal_density_overall(lengths, widths, final_union_of_zones,  bucketed_fibers):
     #FOR BUCKETED FIBERS:  0 is annotation, 1 is epith, 2 is mid, 3 is stromal
     final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers)
-
-    #For Final Union of Zones, it is reversed: 0 is Stromal, 1 is mid, 2 is epith, 3 is annotation itself. So we reverse it
     return get_signal_density_per_zone(final_union_of_zones, final_counts)
 
 def get_singal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, zones):

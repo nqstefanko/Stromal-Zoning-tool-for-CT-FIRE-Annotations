@@ -1,69 +1,67 @@
 import shapely.geometry as geo # Polygon, Point
-import matplotlib.patches as patches
 import geojson
 import numpy as np
 from shapely.plotting import plot_polygon
 
 class Annotation():
-    def __init__(self, name, color, pts, og_index) -> None:
+    # It takes four parameters:
+    # - 'name': a string representing the name of the annotation
+    # - 'color': a string representing the color of the annotation
+    # - 'pts': an np.array(len_of_points, 2)
+    # - 'og_index': an integer representing the original index of the annotation
+    def __init__(self, name: str, color: str, pts: np.array, og_index: int) -> None:
         self.name = name
         self.color = color
         self.points = pts
         self.original_index = og_index
         self.geo_polygon = geo.Polygon(pts)
-
+    
+    def __str__(self):
+        return f'Annotation {self.name}, {self.original_index}, {self.color}, {self.points.shape}'
 
 class AnnotationHelper():
     "This class is related to everything that has to do with annotations and geojson export file"
     def __init__(self, annotated_geojson_filepath, image_dims=(3700, 3700)) -> None:
-        # self.patch_polygons = [] self.patch_polygons.append(patches.Polygon(np.array(points), closed=True))
-        self.filepath = '' # geojson filepath
+        self.filepath = annotated_geojson_filepath
         self.img_dims = image_dims
-        
-        self.feature_collection_dict = {}
+
         self.annotations = []
-        self.all_annotations = []
-        self.zoned_polys = []
+        self.feature_collection_dict = {}
         
         with open(annotated_geojson_filepath, "r") as exported_annotation_fp:
             self.feature_collection_dict = geojson.load(exported_annotation_fp)
-        self._load_annotations()
+            
+        self._load_annotations() # Will Set self.annotations
 
     def _load_annotations(self):
-        """Gets Annotation Object in form of {colors, points} from exorted QuPath Annotations"""
+        """Gets Annotation Object in form of {colors, points} from exorted QuPath Annotations
+        
+            # print(f"Feature {colored(str(i), 'green')} - Type: {feature_collection_annotation['type']}, id:{feature_collection_annotation['id']}, Props:{feature_collection_annotation['properties']}")
+            # Type: Feature, id:3affff8b-be30-410f-ae1f-a415d831b074, Props:{'objectType': 'annotation', 'classification': {'name': 'Ignore', 'color': [255, 0, 0]}
+        """
         for i, self.feature_collection_dict in enumerate(self.feature_collection_dict['features']):
-                # print(f"Feature {colored(str(i), 'green')} - Type: {feature_collection_annotation['type']}, id:{feature_collection_annotation['id']}, Props:{feature_collection_annotation['properties']}")
-                # Type: Feature, id:3affff8b-be30-410f-ae1f-a415d831b074, Props:{'objectType': 'annotation', 'classification': {'name': 'Ignore', 'color': [255, 0, 0]}
-                points = self.feature_collection_dict['geometry']['coordinates'][0]
-                if self.feature_collection_dict['properties'].get('classification', None):
-                    classification = self.feature_collection_dict['properties']['classification']
-                else:
-                    classification = self.feature_collection_dict['properties']
-                
-                name = classification['name']  # Ex: DCIS, Ignore
-                color = classification.get('color', [255, 0, 0]) # Ex: [255, 0, 255]
-                
-                self.annotations.append(Annotation( name, color, np.array(points), i))
-                self.all_annotations.append(Annotation( name, color, np.array(points), i))
-
+           
+            # Depending on how a human exported the annotations, the info like color
+            # may be in the properities field or the props[classification] field
+            points = self.feature_collection_dict['geometry']['coordinates'][0]
+            if self.feature_collection_dict['properties'].get('classification', None):
+                classification = self.feature_collection_dict['properties']['classification']
+            else:
+                classification = self.feature_collection_dict['properties']
+            
+            name = classification['name']  # Ex: DCIS, Ignore
+            color = classification.get('color', [255, 0, 0]) # Ex: [255, 0, 255]
+            
+            self.annotations.append(Annotation( name, color, np.array(points), i))
+    
     def get_specific_annotations(self, anno_names=[]):
         if not anno_names:
             return self.annotations
         specific_annos = []
-        for annotation in self.all_annotations:
+        for annotation in self.annotations:
             if(annotation.name in anno_names):
                 specific_annos.append(annotation)
         return specific_annos
-    
-    def set_annotations(self, anno_names):
-        self.annotations = []
-        for annotation in self.all_annotations:
-            if(not anno_names or annotation.name in anno_names):
-                self.annotations.append(annotation)
-        return self.annotations
-    
-    def reset_annotations(self):
-        self.annotations = self.all_annotations
     
     def get_final_zones(self, zones, annotations_names=[]):
         """This takes each annotation, and creates the additional zones (+1 for other stromal) and sends it"""
@@ -165,4 +163,11 @@ class AnnotationHelper():
         return self.feature_collection_dict[key]
     
     
-    # patches_polygons.append(patches.Polygon(np.array(points), closed=True))
+# patches_polygons.append(patches.Polygon(np.array(points), closed=True))
+# import matplotlib.patches as patches
+
+        #         self.all_annotations = []
+        # self.all_annotations.append(Annotation( name, color, np.array(points), i))
+        # self.patch_polygons = [] self.patch_polygons.append(patches.Polygon(np.array(points), closed=True))
+        #     def reset_annotations(self):
+        # self.annotations = self.all_annotations

@@ -4,14 +4,17 @@ import matplotlib.pyplot as plt
 from numpyencoder import NumpyEncoder
 import json
 from termcolor import cprint, colored
+from dcis_utils import print_function_dec
 
 class CTFIREOutputHelper():
     def __init__(self, mat_filepath):
+        """This helper is made to assist with getting the CTF output from the matfile"""
         self.ctfire_dict = loadmat(mat_filepath)
         self.fibers = None
         self.fiber_lengths = None
         self.length_threshold = None
         self.centroids = None
+        self.midpoints = None
         self.fiber_widths = None
         self.fiber_angles = None
 
@@ -54,6 +57,7 @@ class CTFIREOutputHelper():
             all_middles[i] = middle_point
         return all_middles
     
+    @print_function_dec
     def get_fiber_vertices_thresholded(self):
         length_threshold = self.get_fiber_len_threshold()
         length_of_fibers = self.get_fiber_lengths()
@@ -81,6 +85,7 @@ class CTFIREOutputHelper():
 
     def get_fiber_vertices(self):
         all_coords = []
+        # all_coords = np.empty(len(self.get_fiber_lengths()), dtype=object) and # all_coords[i] = coords
         for i in range(len(self.get_fiber_lengths())):
             vertices_to_use = self.ctfire_dict['data']['Fa'][0][0][0][i]['v'][0]
             xa_data = self.ctfire_dict['data']['Xa'][0][0]
@@ -149,6 +154,10 @@ class CTFIREOutputHelper():
     def __getitem__(self, key):
         return self.ctfire_dict[key]
 
+
+class DataManager():
+    def __init__(self) -> None:
+        pass
 
 
 

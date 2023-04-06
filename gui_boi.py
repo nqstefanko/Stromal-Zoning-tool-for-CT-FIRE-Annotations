@@ -20,7 +20,7 @@ IMG_FILETYPES = (
     ('TIFF files', '*.tif'),
     ('JPEG files', '*.jpg'),
     ('PNG files', '*.png'),
-    ('All files', '*.*')
+    # ('All files', '*.*')
 )
 
 GEOJSON_FILETYPES = (
@@ -28,7 +28,7 @@ GEOJSON_FILETYPES = (
 )
 
 MATLAB_FILETYPES = (
-    ('MATLAB files', '*.mat'),
+    ('MATLAB files', '*.mat'),  
 )
 
 class FileSelector:
@@ -99,6 +99,10 @@ class MainFrame:
         self.draw_annotations_checkbox = tk.Checkbutton(self.frame, text="Draw Annotations", variable=self.draw_annotations_var)
         self.draw_annotations_checkbox.grid(row=1, column=0, padx=5, pady=5, sticky="W")
 
+        self.draw_annotations_info_var = tk.BooleanVar()
+        self.draw_annotations_info_checkbox = tk.Checkbutton(self.frame, text="Draw Annotation Info", variable=self.draw_annotations_info_var)
+        self.draw_annotations_info_checkbox.grid(row=1, column=3, padx=5, pady=5, sticky="W")
+        
         self.draw_annotations_textbox = tk.Entry(self.frame)
         self.draw_annotations_textbox.grid(row=1, column=1, padx=5, pady=5)
         self.draw_annotations_label = tk.Label(self.frame, text="- CSV Annotations Names to draw (Default: All)")
@@ -172,6 +176,13 @@ class MainFrame:
         self.get_combo_signal_densities_label = tk.Label(self.bucketed_frame, text="- CSV values for zones to combine (Default: All)")
         self.get_combo_signal_densities_label.grid(row=4, column=2, padx=5, pady=5, sticky="W")
         
+        # Export all information:
+        self.export_info_button = tk.Button(self.bucketed_frame, text='Export all information', command=self.export_info)
+        self.export_info_button.grid(row=5, padx=5, pady=5, sticky="W")
+        
+        self.export_info_textbox = tk.Entry(self.bucketed_frame, width=60)
+        self.export_info_textbox.grid(row=5, column=1, columnspan=2, padx=5, pady=5, sticky="W")
+        
         # PACK IT
         self.bucketed_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)
     
@@ -206,9 +217,13 @@ class MainFrame:
             cprint("Drawing them ANNOTATIONS brother", 'magenta')
             if self.draw_annotations_textbox.get():
                 values_to_draw = [x.strip() for x in self.draw_annotations_textbox.get().split(',')]
-                self.backend.DRAW_HELPER.draw_annotations(self.backend.ANNOTATION_HELPER.get_specific_annotations(values_to_draw)) # draw_anno_indexes = False
+                
+                self.backend.DRAW_HELPER.draw_annotations(
+                    self.backend.ANNOTATION_HELPER.get_specific_annotations(values_to_draw),
+                    draw_anno_indexes=self.draw_annotations_info_var.get()) # draw_anno_indexes = False
             else:
-                self.backend.DRAW_HELPER.draw_annotations(self.backend.ANNOTATION_HELPER.annotations) # draw_anno_indexes = False
+                self.backend.DRAW_HELPER.draw_annotations(self.backend.ANNOTATION_HELPER.annotations,
+                                                          draw_anno_indexes=self.draw_annotations_info_var.get()) # draw_anno_indexes = False
 
         if(self.draw_fibers_var.get()):
             cprint("Drawing them FIBERS brother", 'magenta')
@@ -237,13 +252,14 @@ class MainFrame:
                     cprint(f'Cancer {self.draw_zones_textbox.get()}', 'cyan')
                     to_draw = self.split_string_to_ints(self.draw_zones_textbox.get())
                 self.backend.DRAW_HELPER.draw_zone_outlines(zones, to_draw=to_draw) #  to_draw=[1, 3]
+                # self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw) #  to_draw=[1, 3]
 
     def display_image(self):
         filename = self.img_fileselector.file_text.get()
         if(self.backend):
             self.finalize_image()
             self.newWindow = tk.Toplevel(self.master)
-            self.app = ImageWindow(self.newWindow, image=self.backend.DRAW_HELPER.get_image())
+            self.app = ImageWindow(self.newWindow, image=self.backend.DRAW_HELPER.get_image(), backend=self.backend)
         elif filename:
             self.newWindow = tk.Toplevel(self.master)
             self.app = ImageWindow(self.newWindow, filename)
@@ -262,10 +278,6 @@ class MainFrame:
             self.backend.DRAW_HELPER.save_file_overlay(filename)
             self.save_image_textbox.delete(0, tk.END)
             self.save_image_textbox.insert(0, filename)
-        
-    def new_window(self):
-        self.newWindow = tk.Toplevel(self.master)
-        self.app = ImageWindow(self.newWindow)
 
     def bucket_the_fibers(self):
         """Note: This function is threaded because the bucketing is not the fastest thing in the west"""
@@ -372,7 +384,7 @@ class MainFrame:
         if(self.get_combo_signal_densities_textbox.get()):
             zones_to_combo =  self.split_string_to_ints(self.get_combo_signal_densities_textbox.get())
             
-        singnal_dens_only_stromal = get_singal_density_per_desired_zones(lengths, widths, zones, self.backend.bucketed_fibers, zones_to_combo)
+        singnal_dens_only_stromal = get_signal_density_per_desired_zones(lengths, widths, zones, self.backend.bucketed_fibers, zones_to_combo)
         combo_sig_dens_str = "\nSignal Densities:"
         combo_sig_dens_str+= f"\n\tZone {zones_to_combo}: signal density: {'{0:.2%}'.format(singnal_dens_only_stromal)}"
         msg_box.showinfo("Signla Density Info", combo_sig_dens_str)
@@ -390,17 +402,24 @@ class MainFrame:
             msg_box.showerror("Split Value Error", err_msg)
             cprint(f"{err_msg} - {e}", 'red')
             return None
-        
+
+    def export_info(self):
+        print("Exporting Information...")
+
+
 class ImageWindow:
-    def __init__(self, master, filename=None, image=None):
+    def __init__(self, master, filename=None, image=None, backend=None):
         self.master = master
         self.frame = Frame(self.master)
         if(filename):
             self.image = Image.open(filename)
         else:
             self.image = image
-        self.img_copy= self.image.copy()
+        self.img_copy = self.image.copy()
 
+        self.original_size_x = self.img_copy.size[0]
+        self.original_size_y = self.img_copy.size[1]
+         
         x_img = self.img_copy.size[0]
         y_img = self.img_copy.size[1]
         if(x_img > 800):
@@ -418,6 +437,9 @@ class ImageWindow:
         self.background.pack(side="top", fill="both", expand=True)
 
         self.background.bind('<Configure>', self._resize_image)
+        self.background.bind('<Button 1>', self.getorigin)
+        
+        self.gui_helper = backend
         
     def _resize_image(self,event):
         new_width = event.width
@@ -428,10 +450,34 @@ class ImageWindow:
         self.background_image = ImageTk.PhotoImage(self.image)
         self.background.configure(image =  self.background_image)
 
+    def getorigin(self, eventorigin):
+      global x,y
+      x = eventorigin.x
+      y = eventorigin.y
+      
+      corrected_x = x * self.original_size_x /  self.image.size[0]
+      corrected_y = y * self.original_size_y /  self.image.size[1]
+    #   if(self.gui_helper):
+    #       corrected_point = geo.Point(corrected_x, corrected_y)
+    #       for anno in self.gui_helper.ANNOTATION_HELPER.annotations:
+    #           if(anno.geo_polygon.contains(corrected_point)):
+    #             print(f"YES: {anno.original_index}")
+    #             draw = ImageDraw.Draw(self.img_copy)
+    #             draw.polygon(anno.geo_polygon.exterior.coords, outline='red')
+    #             del draw
+    #             # Update the displayed image
+    #             self.image = self.img_copy.resize((self.image.size[0], self.image.size[1]))
+    #             self.background_image = ImageTk.PhotoImage(self.image)
+    #             self.background.configure(image =  self.background_image)
+    #             break
+                 
+                  
+      
+
 def main(): 
     root = Tk()
     root.title("DCIS Helper")
-    root.geometry("900x600")
+    root.geometry("900x750")
 
     # sv_ttk.set_theme("dark")
     

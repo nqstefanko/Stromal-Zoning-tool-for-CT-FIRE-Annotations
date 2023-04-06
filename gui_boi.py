@@ -227,8 +227,8 @@ class MainFrame:
 
         if(self.draw_fibers_var.get()):
             cprint("Drawing them FIBERS brother", 'magenta')
-            verts = self.backend.CTF_OUTPUT.get_fiber_vertices_thresholded()
-            widths = self.backend.CTF_OUTPUT.get_fiber_widths_thresholded()
+            verts = self.backend.CTF_OUTPUT.fibers
+            widths = self.backend.CTF_OUTPUT.fiber_widths
             if(self.backend.bucketed_fibers is not None and self.draw_fibers_textbox.get()):
                 fiber_zones = self.split_string_to_ints(self.draw_fibers_textbox.get())
                 self.backend.DRAW_HELPER.draw_fibers_per_zone(verts, widths, self.backend.bucketed_fibers, fiber_zones)
@@ -283,8 +283,8 @@ class MainFrame:
         """Note: This function is threaded because the bucketing is not the fastest thing in the west"""
         if(self.backend):
             self.bucket_fibers_label.config(text='Bucketing the Fibers...!', fg= "orange")
-            fibers = self.backend.CTF_OUTPUT.get_fiber_vertices_thresholded()
-            centroids = self.backend.CTF_OUTPUT.get_centroids()
+            fibers = self.backend.CTF_OUTPUT.fibers
+            centroids = self.backend.CTF_OUTPUT.centroids
             if self.bucket_fibers_textbox.get():
                 values_to_draw = [x.strip() for x in self.bucket_fibers_textbox.get().split(',')]
                 annotations_to_use = self.backend.ANNOTATION_HELPER.get_specific_annotations(values_to_draw)
@@ -309,7 +309,7 @@ class MainFrame:
         zone_bound_len = len(zone_boundaries) + 1
         
         print("Calcing Averages")
-        widths = self.backend.CTF_OUTPUT.get_fiber_widths()
+        widths = self.backend.CTF_OUTPUT.fiber_widths
         width_avgs = get_average_value_per_zone(widths, self.backend.bucketed_fibers, zone_bound_len)
         width_avg_str = "Width Averages: \n"
 
@@ -319,23 +319,30 @@ class MainFrame:
             width_avg_str+=f"\t Zone {i} width averages: {width_avgs[i]}\n"
         width_avg_str+=f"\t Total Average Width {np.mean(widths)}\n"
         msg_box.showinfo("Width Info", width_avg_str)
+        width_avg_str+=f"\t List Form: {list(width_avgs.values())}\n"
+        
 
-        lengths = self.backend.CTF_OUTPUT.get_fiber_lengths_thresholded()
+        lengths = self.backend.CTF_OUTPUT.get_fiber_lengths()
         len_avgs = get_average_value_per_zone(lengths, self.backend.bucketed_fibers, zone_bound_len)
         len_avg_str = "Length Averages: \n"
         for i in range(zone_bound_len):
             len_avg_str+=f"\t Zone {i} length averages: {len_avgs[i]}\n"
         len_avg_str+=f"\t Total Average Length {np.mean(lengths)}\n"
         msg_box.showinfo("Length Info", len_avg_str)
+
+        len_avg_str+=f"\t List Form: {list(len_avgs.values())}\n"
+        
             
-        angles = self.backend.CTF_OUTPUT.get_fiber_angles()
+        angles = self.backend.CTF_OUTPUT.fiber_angles
         ang_avgs = get_average_value_per_zone(angles, self.backend.bucketed_fibers, zone_bound_len)
         ang_avg_str = "Angle Averages: \n"
         for i in range(zone_bound_len):
             ang_avg_str+=f"\t Zone {i} angle averages: {ang_avgs[i]}\n"
         ang_avg_str+=f"\t Total Average Angle {np.mean(angles)}\n"
-        
         msg_box.showinfo("Angle Info", ang_avg_str)
+
+        ang_avg_str+=f"\t List Form: {list(ang_avgs.values())}\n"
+        
         
         cprint(width_avg_str, 'yellow')
         cprint(len_avg_str, 'cyan')
@@ -343,8 +350,8 @@ class MainFrame:
 
     def calc_signal_densities(self):
         cprint("Calculating Signal Density", 'magenta')
-        lengths = self.backend.CTF_OUTPUT.get_fiber_lengths_thresholded()
-        widths = self.backend.CTF_OUTPUT.get_fiber_widths_thresholded()
+        lengths = self.backend.CTF_OUTPUT.get_fiber_lengths()
+        widths = self.backend.CTF_OUTPUT.fiber_widths
         
         zone_boundaries = [0, 50, 150]
         if(self.csv_boundaries_textbox.get()):
@@ -367,8 +374,8 @@ class MainFrame:
 
     def calc_combination_signal_densities(self):
         cprint("Calculating Combination Signal Density", 'magenta')
-        lengths = self.backend.CTF_OUTPUT.get_fiber_lengths_thresholded()
-        widths = self.backend.CTF_OUTPUT.get_fiber_widths_thresholded()
+        lengths = self.backend.CTF_OUTPUT.get_fiber_lengths()
+        widths = self.backend.CTF_OUTPUT.fiber_widths
         
         zone_boundaries = [0, 50, 150]
         if(self.csv_boundaries_textbox.get()):
@@ -457,19 +464,19 @@ class ImageWindow:
       
       corrected_x = x * self.original_size_x /  self.image.size[0]
       corrected_y = y * self.original_size_y /  self.image.size[1]
-    #   if(self.gui_helper):
-    #       corrected_point = geo.Point(corrected_x, corrected_y)
-    #       for anno in self.gui_helper.ANNOTATION_HELPER.annotations:
-    #           if(anno.geo_polygon.contains(corrected_point)):
-    #             print(f"YES: {anno.original_index}")
-    #             draw = ImageDraw.Draw(self.img_copy)
-    #             draw.polygon(anno.geo_polygon.exterior.coords, outline='red')
-    #             del draw
-    #             # Update the displayed image
-    #             self.image = self.img_copy.resize((self.image.size[0], self.image.size[1]))
-    #             self.background_image = ImageTk.PhotoImage(self.image)
-    #             self.background.configure(image =  self.background_image)
-    #             break
+      if(self.gui_helper):
+          corrected_point = geo.Point(corrected_x, corrected_y)
+          for anno in self.gui_helper.ANNOTATION_HELPER.annotations:
+              if(anno.geo_polygon.contains(corrected_point)):
+                print(f"YES: {anno.original_index}")
+                # draw = ImageDraw.Draw(self.img_copy)
+                # draw.polygon(anno.geo_polygon.exterior.coords, outline='red')
+                # del draw
+                # # Update the displayed image
+                # self.image = self.img_copy.resize((self.image.size[0], self.image.size[1]))
+                # self.background_image = ImageTk.PhotoImage(self.image)
+                # self.background.configure(image =  self.background_image)
+                # break
                  
                   
       
@@ -486,4 +493,3 @@ def main():
     
 if __name__ == '__main__':
     main()
-    

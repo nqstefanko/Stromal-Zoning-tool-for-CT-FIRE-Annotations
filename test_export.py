@@ -431,11 +431,11 @@ def get_average_value_per_zone(values, bucketed_fibers, num_of_zones = 4):
     for i in range(num_of_zones):
         labeled_values = values[np.where(labeled_fibers == i)]
         if(not labeled_values.any()):
-            width_mean = 0
+            value_mean = 0
         else:
-            width_mean =  np.mean(labeled_values)
-        final_counts[i] = width_mean 
-
+            value_mean =  np.mean(labeled_values)
+        final_counts[i] = value_mean 
+    # print(list(final_counts.values()))
     return final_counts
 
 

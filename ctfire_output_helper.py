@@ -51,7 +51,6 @@ class CTFIREOutputHelper():
     def fiber_lengths(self):
         return self._fiber_lengths
     
-    @print_function_dec
     def get_fiber_lengths(self, length_threshold=None):
         """Gets all fiber lengths less than threshold"""
         if length_threshold is None:
@@ -67,7 +66,6 @@ class CTFIREOutputHelper():
     def fibers(self):
         return self._fibers
     
-    @print_function_dec
     def get_fibers(self, length_threshold=None):
         """Get all of the fibers (arr of coords (x,y)) that are less than the length of threshold
 
@@ -99,7 +97,6 @@ class CTFIREOutputHelper():
     def fiber_widths(self):
         return self._fiber_widths
     
-    @print_function_dec
     def get_fiber_widths(self, length_threshold=None):
         if length_threshold is None:
             length_threshold = self.length_threshold
@@ -117,7 +114,6 @@ class CTFIREOutputHelper():
     def fiber_angles(self):
         return self._fiber_angles
     
-    @print_function_dec
     def get_fiber_angles(self, length_threshold=None):
         if length_threshold is None:
             length_threshold = self.length_threshold
@@ -156,28 +152,8 @@ class CTFIREOutputHelper():
             middle_point = np.median(fibers[i], axis=0)
             all_middles[i] = middle_point
         return all_middles
-    
-class DataManager():
-    def __init__(self) -> None:
-        pass
 
 
 if __name__ == '__main__':
     pass
-    # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop2.mat"
-    # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
-    # CTF_OUTPUT = CTFIREOutputHelper(MAT_FILEPATH)
-
-# ctfire_parameters = ctfire_export_dict['cP']
-# ctfire_data = ctfire_export_dict['data']
-# ctfire_M_data = ctfire_data['M']
-
-# mat_dict = get_ctfire_output_dict_from_matfile(mat_filepath)
-# print(mat_dict.keys())
-
-# with open('dcis_data/all_coords_16.json', 'w') as f:
-#     json.dump(all_coords, f, cls=NumpyEncoder)
-
-# def get_fiber_widths_from_csv(self, csv_file):
-#     my_data = np.genfromtxt(csv_file, delimiter=',')
-#     print(my_data.shape)
+  

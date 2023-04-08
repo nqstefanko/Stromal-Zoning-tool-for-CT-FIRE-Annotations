@@ -21,8 +21,6 @@ import time
 import traceback
 from dcis_utils import print_function_dec
 
-
-
 from ctfire_output_helper import CTFIREOutputHelper
 from annotation_helper import AnnotationHelper
 from shapely.plotting import plot_polygon
@@ -39,16 +37,18 @@ from shapely.plotting import plot_polygon
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\ctFIREout\ctFIREout_DCIS-016_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
 # #18 DENOISED DATA 18
-EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
-TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
-MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
+# EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
+# TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
+# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
 # COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue', 'orange', 'pink', 'brown']
-COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue']
 # COLORS = [ 'cyan', 'white', 'blue','green','magenta']
 
-with Image.open(TIF_FILEPATH) as img:
-    IMG_DIMS = img.size
+# with Image.open(TIF_FILEPATH) as img:
+#     IMG_DIMS = img.size
+
+
+COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue']
 
 class DrawingHelper():
     def __init__(self, tif_file=None) -> None:
@@ -299,6 +299,8 @@ class GUI_Helper():
         self.DRAW_HELPER = DrawingHelper(tif_filepath)
         self.ANNOTATION_HELPER = AnnotationHelper(annotation_filepath, self.DRAW_HELPER.image.size)
         self.bucketed_fibers = None
+        self.combo_zones_numbers = {}
+        self.annotations_indexes_bucketed_on = []
     
     @print_function_dec
     def bucket_the_fibers(self, fibers, centroids, annotations, buckets=np.array([0, 50, 150])):
@@ -373,6 +375,10 @@ def get_signal_density_for_all_annotations(bucketed_fibers, annotations, lengths
         all_signal_dens_per_annotations[i]  = final_density / anno.geo_polygon.area
     return all_signal_dens_per_annotations
 
+#TODO
+def get_signal_density_per_annotation_with_zones():
+    pass
+
 def get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones):
     labeled_fibers = bucketed_fibers.min(axis=1)
     final_counts = {}
@@ -443,94 +449,3 @@ if __name__ == '__main__':
     pass
 
 
-# verts = final_union_zone_polygon.exterior.coords
-        # overlay = Image.new('RGBA', self.image.size, (0,0,0,0))
-        # draw = ImageDraw.Draw(overlay)  # Create a context for drawing things on it.
-        # return overlay
-    # def _draw_polygon_helper_new(self, polygon, colors, current_depth, to_draw, zone_len):
-    #     """THIS IS BROKEN ATM"""
-    #     color = colors[current_depth]
-    #     filling = ImageColor.getrgb(color) + (32,)
-    #     lining = ImageColor.getrgb(color) + (64,)
-    #     if(polygon.area < 10):
-    #         return
-    #     print(color, current_depth, int(polygon.area), type(polygon.boundary) == shapely.geometry.MultiLineString)
-        
-    #     if type(polygon.boundary) == shapely.geometry.MultiLineString:            
-    #         self.draw_image.polygon(list(polygon.exterior.coords), width=5,outline=lining)#(255, 0, 0, 100))
-    #         for interior in polygon.interiors:
-    #             new_depth = current_depth + 1
-    #             if(zone_len - new_depth - 1 in to_draw):
-    #                 print("DEEP", new_depth, colors[new_depth])
-    #                 filling = ImageColor.getrgb(colors[new_depth]) + (32,)
-    #                 lining = ImageColor.getrgb(colors[new_depth]) + (64,)
-    #                 self.draw_image.polygon(list(interior.coords), width=5, outline=lining)#(0, 255, 0, 100))
-    #             # else:
-    #             # Trying to erase bad pieces
-    #             #     self.draw_image.polygon(list(interior.coords), fill=(255, 255, 255, 0))
-    #                 self.save_file_overlay('images/penis.tif')
-    #                 input('Click Enter: ')
-
-    #     else:
-    #         coords = np.array(polygon.exterior.coords).astype('float32')
-    #         if(zone_len - current_depth - 1 in to_draw or not to_draw):
-    #             self.draw_image.polygon(coords, width=5, outline=lining)
-    #         else:
-    #             pass
-    #             # self.draw_image.polygon(coords, fill=(255, 255, 255, 0)) # Trying to erase bad pieces
-    #         self.save_file_overlay('images/penis.tif')
-    #         # input('Click Enter: ')
-            
-    # def draw_zones(self, list_of_union_zones, to_draw=[],  colors = COLORS):
-    #     """THIS IS BROKEN ATM"""
-    #     print(colors)
-    #     list_to_draw = list(to_draw)
-    #     list_of_union_zones = list_of_union_zones[::-1] # Stromal, MID, EPITH, DCIS
-    #     for i in range(len(list_of_union_zones)):
-    #         zone_len =  len(list_of_union_zones) 
-    #         ind = zone_len -  1 - i # 3,2,1,0 [1,3]
-    #         if((not list_to_draw or ind in list_to_draw) and list_of_union_zones[i].area > 0):
-    #             final_union_zone_polygon = list_of_union_zones[i]
-    #             if(type(final_union_zone_polygon) == shapely.geometry.multipolygon.MultiPolygon):
-    #                 for polygon in final_union_zone_polygon.geoms:
-    #                     self._draw_polygon_helper_new(polygon, colors, i, to_draw, zone_len)
-    #             else:
-    #                 self._draw_polygon_helper_new(polygon, colors, i, to_draw, zone_len)
-                    
-    #     self.save_file_overlay('images/penis.tif')
-    #     # self.image = Image.alpha_composite(self.image, self.rgbimg)
-    
-    
-    
-    
-# def get_average_length_per_zone(lengths, bucketed_fibers, num_of_zones = 4):
-#     labeled_fibers = bucketed_fibers.min(axis=1)
-#     final_counts = {}
-#     for i in range(num_of_zones):
-#         final_counts[i] = 0
-        
-#     for i in range(num_of_zones):
-#         labeled_lengths = lengths[np.where(labeled_fibers == i)]
-#         if(not labeled_lengths.any()):
-#             width_mean = 0
-#         else:
-#             width_mean =  np.mean(labeled_lengths)
-#         final_counts[i] = width_mean 
-
-#     return final_counts
-
-# def get_average_angle_per_zone(angles, bucketed_fibers, num_of_zones = 4):
-#     labeled_fibers = bucketed_fibers.min(axis=1)
-#     final_counts = {}
-#     for i in range(num_of_zones):
-#         final_counts[i] = 0
-            
-#     for i in range(num_of_zones):
-#         labeled_angles = angles[np.where(labeled_fibers == i)]
-#         if(not labeled_angles.any()):
-#             width_mean = 0
-#         else:
-#             width_mean =  np.mean(labeled_angles)
-#         final_counts[i] = width_mean 
-
-#     return final_counts

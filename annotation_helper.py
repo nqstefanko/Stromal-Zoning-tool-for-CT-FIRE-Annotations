@@ -6,6 +6,7 @@ from dcis_utils import print_function_dec
 
 
 class Annotation():
+    """This represents a QuPath Annotation and its Properties"""
     # It takes four parameters:
     # - 'name': a string representing the name of the annotation
     # - 'color': a string representing the color of the annotation
@@ -20,6 +21,7 @@ class Annotation():
     
     def __str__(self):
         return f'Annotation {self.name}, {self.original_index}, {self.color}, {self.points.shape}'
+
 
 class AnnotationHelper():
     "This class is related to everything that has to do with annotations and geojson export file"
@@ -52,6 +54,20 @@ class AnnotationHelper():
             
             self.annotations.append(Annotation( name, color, np.array(points), i))
     
+    def get_annotation_indexes(self, annos_to_draw=[]):
+        specific_annos = []
+        for annotation in self.annotations:
+            if(annotation.name in annos_to_draw or str(annotation.original_index) in annos_to_draw ):
+                specific_annos.append(annotation.original_index)
+        return specific_annos
+    
+    def get_annotations_from_indexes(self, anno_indexes):
+        annos = []
+        for anno in self.annotations:
+            if(anno.original_index in anno_indexes or not anno_indexes):
+                annos.append(anno)
+        return annos
+
     def get_specific_annotations(self, anno_names=[]):
         """Create a new list full of annotations that fit the specific names"""
         if not anno_names:
@@ -61,6 +77,43 @@ class AnnotationHelper():
             if(annotation.name in anno_names):
                 specific_annos.append(annotation)
         return specific_annos
+    
+    def get_final_union_zones(self, zones, anno_indexes):
+        """This takes each annotation, and creates the additional zones (+1 for other stromal) and sends it"""
+        list_of_union_zones = [None] * len(zones)
+        
+        point_list = [[0,0], [self.img_dims[0], 0], [self.img_dims[0], self.img_dims[1]], [0, self.img_dims[1]]]
+        picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
+        for annotation in self.annotations:
+            if(annotation.original_index in anno_indexes):
+                original_annotation_poly = annotation.geo_polygon
+                curr_poly = []
+                for i, zone in enumerate(zones):                
+                    if(zone <= 0):
+                        difference_poly = original_annotation_poly
+                    else:
+                        poly_to_use = curr_poly[i - 1] # Previous Sized Polygon
+                        zone_size = zone - zones[i - 1] # What to increase boundary by in pixels
+                        dilated_poly = poly_to_use.buffer(zone_size, single_sided=True) # Increase Boundaries
+                        difference_poly = picture_poly.intersection(dilated_poly) #If boundaries extend outside of image, cut it out
+                        # difference_poly = dilated_poly.difference(poly_to_use) #.difference(original_annotation_poly)      
+                    if(list_of_union_zones[i]):
+                        list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
+                    else:
+                        list_of_union_zones[i] = difference_poly
+                    curr_poly.append(difference_poly)
+
+        other_stromal_area =  geo.Polygon([[p[0], p[1]] for p in point_list])
+        for final_union_zone_polygon in list_of_union_zones:
+            other_stromal_area = other_stromal_area.difference(final_union_zone_polygon)
+
+        final_to_add = list_of_union_zones[0]
+        for i, zone in enumerate(list_of_union_zones[1:]):
+            zone = zone.difference(final_to_add)
+            list_of_union_zones[i+1] = zone
+            final_to_add = final_to_add.union(zone)
+            
+        return list_of_union_zones + [other_stromal_area]
     
     def get_final_zones(self, zones, annotations_names=[]):
         """This takes each annotation, and creates the additional zones (+1 for other stromal) and sends it"""
@@ -136,8 +189,65 @@ class AnnotationHelper():
             final_to_add = final_to_add.union(zone)
         
         return list_of_union_zones + [other_stromal_area]
+    
+    def get_zones_per_anno_index(self, zones, anno_indexes):
+        """This takes each annotation, and creates the additional zones (+1 for other stromal) and sends it"""
+        list_of_union_zones = [None] * len(zones)
         
-    #TODO: Double check the interactions of the zones brother
+        point_list = [[0,0], [self.img_dims[0], 0], [self.img_dims[0], self.img_dims[1]], [0, self.img_dims[1]]]
+        picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
+        for annotation in self.annotations:
+            if( annotation.original_index in anno_indexes):
+                original_annotation_poly = annotation.geo_polygon
+                curr_poly = []
+                for i, zone in enumerate(zones):                
+                    if(zone <= 0):
+                        difference_poly = original_annotation_poly
+                    else:
+                        poly_to_use = curr_poly[i - 1] # Previous Sized Polygon
+                        zone_size = zone - zones[i - 1] # What to increase boundary by in pixels
+                        dilated_poly = poly_to_use.buffer(zone_size, single_sided=True) # Increase Boundaries
+                        difference_poly = picture_poly.intersection(dilated_poly) #If boundaries extend outside of image, cut it out
+                        # difference_poly = dilated_poly.difference(poly_to_use) #.difference(original_annotation_poly)      
+                    if(list_of_union_zones[i]):
+                        list_of_union_zones[i] = list_of_union_zones[i].union(difference_poly)
+                    else:
+                        list_of_union_zones[i] = difference_poly
+                    curr_poly.append(difference_poly)
+
+        other_stromal_area =  geo.Polygon([[p[0], p[1]] for p in point_list])
+        for final_union_zone_polygon in list_of_union_zones:
+            other_stromal_area = other_stromal_area.difference(final_union_zone_polygon)
+
+        final_to_add = list_of_union_zones[0]
+        for i, zone in enumerate(list_of_union_zones[1:]):
+            zone = zone.difference(final_to_add)
+            list_of_union_zones[i+1] = zone
+            final_to_add = final_to_add.union(zone)
+            
+        return list_of_union_zones + [other_stromal_area]
+    
+    def get_zones_for_single_anno(self, zones, anno_index):
+        list_of_union_zones = [None] * len(zones)
+        point_list = [[0,0], [self.img_dims[0], 0], [self.img_dims[0], self.img_dims[1]], [0, self.img_dims[1]]]
+        picture_poly = geo.Polygon([[p[0], p[1]] for p in point_list])
+        
+        original_annotation_poly = self.annotations[anno_index].geo_polygon
+        for i, zone in enumerate(zones):                
+            if(zone <= 0):
+                difference_poly = original_annotation_poly
+            else:
+                poly_to_use = list_of_union_zones[i - 1] # Previous Sized Polygon
+                zone_size = zone - zones[i - 1] # What to increase boundary by in pixels
+                dilated_poly = poly_to_use.buffer(zone_size, single_sided=True) # Increase Boundaries
+                difference_poly = picture_poly.intersection(dilated_poly) #If boundaries extend outside of image, cut it out
+            list_of_union_zones[i] = difference_poly
+
+        other_stromal_area =  geo.Polygon([[p[0], p[1]] for p in point_list])
+        for final_union_zone_polygon in list_of_union_zones:
+            other_stromal_area = other_stromal_area.difference(final_union_zone_polygon)
+            
+        return list_of_union_zones + [other_stromal_area]
     
     @print_function_dec
     def get_final_zones_for_plotting(self, zones, annotations_names=[]):
@@ -203,12 +313,8 @@ class AnnotationHelper():
         return self.feature_collection_dict[key]
     
 
-
-
-
-
-
-
+#TODO: Double check the interactions of the zones brother
+    
 
 
 

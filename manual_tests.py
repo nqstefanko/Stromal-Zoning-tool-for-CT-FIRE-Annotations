@@ -1,6 +1,6 @@
 from ctfire_output_helper import CTFIREOutputHelper
 from annotation_helper import AnnotationHelper
-from test_export import *
+# from test_export import *
 from termcolor import cprint, colored
 
 import dcis_utils as du
@@ -22,10 +22,10 @@ EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Col
 # TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-016_10x10_1_Nuclei_Collagen - Denoised.tif")
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\ctFIREout\ctFIREout_DCIS-016_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
-#18 DENOISED DATA 18
-EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
-TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
-MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
+# #18 DENOISED DATA 18
+# EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
+# TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
+# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
 with Image.open(TIF_FILEPATH) as img:
     IMG_DIMS = img.size
@@ -78,7 +78,8 @@ if plot_tests:
              
     def test_plot_zones(zones=[0, 50, 150]):
         cprint("\nPlotting all zones...", 'cyan')
-        list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting(zones)
+        # list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting(zones)
+        list_of_union_zones = ANNOTATION_HELPER.get_final_zones(zones)
         PLOT_HELPER._plot_zones(list_of_union_zones)
         PLOT_HELPER.show_plot()
         PLOT_HELPER.reset()
@@ -143,11 +144,15 @@ if draw_tests:
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
 
     def test_draw_zones():
-        zones = ANNOTATION_HELPER.get_final_zones([0, 25, 50, 100])
-        # zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150])
+        # zones = ANNOTATION_HELPER.get_final_zones([0, 25, 50, 100]) # [0, 50, 150]
+        # DRAW_HELPER.draw_zones(zones)
+        # DRAW_HELPER.save_file_overlay('images/coffee.tif')
+
+        indexes = ANNOTATION_HELPER.get_annotation_indexes([], [0, 2])
+        zones = ANNOTATION_HELPER.get_final_union_zones([0, 25, 50, 100], indexes) # [0, 50, 150]
         DRAW_HELPER.draw_zones(zones)
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
-
+        
     def test_draw_specific_zones(to_draw=[]):
         zones = ANNOTATION_HELPER.get_final_zones([0, 25, 50, 100])
         # zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150])
@@ -165,6 +170,23 @@ if draw_tests:
         # zones = ANNOTATION_HELPER.get_final_zones([0, 50, 150])
         DRAW_HELPER.draw_zone_outlines(zones, to_draw)
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
+    
+    def test_draw_anno_indexes():
+        # DRAW_HELPER.draw_annotations(ANNOTATION_HELPER.annotations, draw_anno_indexes = False)
+        zones = ANNOTATION_HELPER.get_zones_per_anno_index([0, 50, 150], [0,3])
+        DRAW_HELPER.draw_zone_outlines(zones)
+        
+        final_path = os.path.join(sys.path[0], 'images/coffee.tif')
+        composite_image = Image.alpha_composite(DRAW_HELPER.image, DRAW_HELPER.rgbimg)
+        composite_image.save(final_path)
+    
+    def test_draw_single_anno():
+        # DRAW_HELPER.draw_annotations(ANNOTATION_HELPER.annotations, draw_anno_indexes = False)
+        zones = ANNOTATION_HELPER.get_zones_for_single_anno([0, 50, 150], 1)
+        DRAW_HELPER.draw_zone_outlines(zones)
+        final_path = os.path.join(sys.path[0], 'images/coffee.tif')
+        composite_image = Image.alpha_composite(DRAW_HELPER.image, DRAW_HELPER.rgbimg)
+        composite_image.save(final_path)
         
     def test_draw_overlay():
         zones = list(reversed(ANNOTATION_HELPER.get_final_zones([0, 50, 150])))
@@ -186,7 +208,7 @@ if draw_tests:
     # test_draw_annotations_with_indexes()
     # test_draw_fibers()
     # test_all_draw_fibers()
-    # test_draw_zones()
+    test_draw_zones()
     # test_draw_specific_zones([1,2,3])
     # test_draw_specific_zones([0,3])
     # test_draw_specific_zones([0,1,2])
@@ -196,6 +218,8 @@ if draw_tests:
     # test_draw_zone_outlines_specific([1,3])
     # test_draw_zone_outlines_specific([0,2])
     # test_draw_zone_outlines_specific([0,1,2])
+    # test_draw_anno_indexes()
+    # test_draw_single_anno()
     # test_draw_overlay()
     ############ MANUAL DRAWING/DRAW_HELPER TESTS: ############
     # test_plot_zones([0, 25, 50, 100])
@@ -230,6 +254,7 @@ if zone_tests:
         composite_image = Image.alpha_composite(DRAW_HELPER.image, DRAW_HELPER.rgbimg)
         composite_image.save(final_path)
 
+    
     def test_plot_specific_zones():
         list_of_union_zones = ANNOTATION_HELPER.get_final_zones_for_plotting([0, 50, 150], ['DCIS',  'Atypia'])
         PLOT_HELPER._plot_zones(list_of_union_zones)

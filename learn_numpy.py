@@ -25,6 +25,7 @@ fiber_buckets_simulation = np.array([
     [0, 2, 3], #Fiber
     [0, 3, 3], #Fiber
     [3, 3, 3], #Fiber
+#Ann 0  1  2
     #Each col is bucketed
 ])
 

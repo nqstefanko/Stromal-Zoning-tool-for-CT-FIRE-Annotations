@@ -314,6 +314,16 @@ class MainFrame:
     def bucket_the_fibers(self):
         """Note: This function is threaded because the bucketing is not the fastest thing in the west"""
         if(self.backend):
+            if(self.csv_boundaries_textbox.get()):
+                zone_boundaries = self.split_string_to_ints(self.csv_boundaries_textbox.get())
+                if zone_boundaries is None:
+                    return
+                if('0' not in zone_boundaries):
+                    err_msg = f"Zero is required as first value for zones!"
+                    msg_box.showerror("Zone Value Error", err_msg)
+                    cprint(f"{err_msg}", 'red')
+                    return
+
             self.bucket_fibers_label.config(text='Currently Bucketing the Fibers...', fg= "orange")
             fibers = self.backend.CTF_OUTPUT.fibers
             centroids = self.backend.CTF_OUTPUT.centroids
@@ -326,11 +336,7 @@ class MainFrame:
             annotations_to_use = self.backend.ANNOTATION_HELPER.get_annotations_from_indexes(anno_indexes)
                 
             zone_boundaries = [0, 50, 150]
-            if(self.csv_boundaries_textbox.get()):
-                zone_boundaries = self.split_string_to_ints(self.csv_boundaries_textbox.get())
-                if zone_boundaries is None:
-                    self.bucket_fibers_label.config(text="Fibers currently UNBUCKETED!", fg="red")
-                    return
+
 
             def bucket_fibers():
                 self.backend.bucket_the_fibers(fibers, centroids, annotations_to_use, zone_boundaries)

@@ -397,7 +397,7 @@ def get_signal_density_overall(lengths, widths, final_union_of_zones,  bucketed_
     return get_signal_density_per_zone(final_union_of_zones, final_counts), actual_counts
 
 def get_signal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, zones):
-    final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len(final_union_of_zones))
+    final_counts, actual_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len(final_union_of_zones))
     final_area = 0
     final_density = 0
     

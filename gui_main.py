@@ -214,6 +214,12 @@ class MainFrame:
         self.bucketed_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)
     
     def set_objects(self):
+        # Do quick clear!
+        self.backend = None
+        self.frame.pack_forget()
+        self.display_save_frame.pack_forget()
+        self.bucketed_frame.pack_forget()
+        
         mat_file = self.mat_fileselector.file_text.get()
         img_file = self.img_fileselector.file_text.get()
         anno_file = self.geojson_fileselector.file_text.get()
@@ -242,8 +248,6 @@ class MainFrame:
         self.backend.DRAW_HELPER.reset()
     
         if(self.draw_annotations_var.get()):
-            cprint("\tDrawing ANNOTATIONS...", 'cyan')
-            
             if self.draw_annotations_textbox.get():
                 values_to_draw = [x.strip() for x in self.draw_annotations_textbox.get().split(',')]
                 anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(values_to_draw)
@@ -266,8 +270,6 @@ class MainFrame:
                 
         if(self.backend.bucketed_fibers is not None):
             if(self.draw_zones_var.get()):
-                cprint("\tDrawing ZONES...", 'cyan')
-                
                 zone_boundaries = [0, 50, 150]
                 if(self.csv_boundaries_text.get()):
                     zone_boundaries = self.split_string_to_ints(self.csv_boundaries_text.get())
@@ -281,6 +283,7 @@ class MainFrame:
                 to_draw = list(np.arange(len(zones)))
                 if(self.draw_zones_textbox.get()):
                     to_draw = self.split_string_to_ints(self.draw_zones_textbox.get())
+                # self.backend.DRAW_HELPER.draw_zone_outlines(zones, to_draw=to_draw) #  to_draw=[1, 3]
                 self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw) #  to_draw=[1, 3]
 
     def display_image(self):
@@ -311,7 +314,7 @@ class MainFrame:
     def bucket_the_fibers(self):
         """Note: This function is threaded because the bucketing is not the fastest thing in the west"""
         if(self.backend):
-            self.bucket_fibers_label.config(text='Bucketing Fibers...', fg= "orange")
+            self.bucket_fibers_label.config(text='Currently Bucketing the Fibers...', fg= "orange")
             fibers = self.backend.CTF_OUTPUT.fibers
             centroids = self.backend.CTF_OUTPUT.centroids
             
@@ -653,14 +656,3 @@ if __name__ == '__main__':
 
 
 
-                        
-        # For the 2nd annotation
-    
-                # draw = ImageDraw.Draw(self.img_copy)
-                # draw.polygon(anno.geo_polygon.exterior.coords, outline='red')
-                # del draw
-                # # Update the displayed image
-                # self.image = self.img_copy.resize((self.image.size[0], self.image.size[1]))
-                # self.background_image = ImageTk.PhotoImage(self.image)
-                # self.background.configure(image =  self.background_image)
-                # break

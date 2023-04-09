@@ -13,16 +13,16 @@ EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Col
 EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\Copy Stuff\2B_D9_crop2_extra_anno.geojson"
 
 # # # # CROPPED_IMG DATA CROP 1
-# TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.tif"
-# MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop1.mat"
-# EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.geojson"
+TIF_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.tif"
+MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\ctFIREout_2B_D9_crop1.mat"
+EXPORTED_ANNOTATION_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\ctFIRE_v2.0Beta_TestImages\2B_D9_crop1.geojson"
 
 #16 DENOISED DATA 16
 # EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-016_10x10_1_Nuclei_Collagen - Denoised.geojson")
 # TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-016_10x10_1_Nuclei_Collagen - Denoised.tif")
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\ctFIREout\ctFIREout_DCIS-016_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
-# #18 DENOISED DATA 18
+# # #18 DENOISED DATA 18
 # EXPORTED_ANNOTATION_FILEPATH = os.path.join(sys.path[0], "./ANNOTATED-DCIS-018_10x10_1_Nuclei_Collagen - Denoised.geojson")
 # TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
@@ -202,14 +202,14 @@ if draw_tests:
     # test_all_draw_fibers()
     
     # test_draw_all_zones() # BROKEN? Maybe not?
-    # test_draw_specific_zones([1, 3]) # BROKEN? Maybe not?
+    test_draw_specific_zones([0,1]) # BROKEN? Maybe not?
     
     # test_draw_zone_outlines()
     # test_draw_zone_outlines_specific([1,3])
     # test_draw_overlay()
     ############ MANUAL DRAWING/DRAW_HELPER TESTS: ############
     # test_plot_all_zones()
-    test_plot_specific_zones(to_plot=[1, 3])
+    # test_plot_specific_zones(to_plot=[1, 3])
 
 if zone_tests:
     def test_draw_fibers_per_zone_single_zone():

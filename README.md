@@ -3,7 +3,7 @@
 This repo was built to help analyze DCIS samples with CTFire Results. 
 
 ## Usage:
-In order to run the GUI Application, simply run ***.exe. 
+In order to run the GUI Application, simply run gui_main.exe which is found in the Executable/dist directory. 
 
 ## Breakdown of GUI
 ### First Opening the Application

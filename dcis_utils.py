@@ -4,6 +4,7 @@ import traceback
 import time
 from datetime import datetime
 import numpy as np
+import decimal
 
 def print_function_dec(func):
     """This function is written to help write out time of functions and get exceptions"""
@@ -13,7 +14,8 @@ def print_function_dec(func):
         print(colored("Going into ", 'magenta') + colored(func.__name__, 'green') + colored(f" at time {datetime.utcnow()}", "magenta"))
         try:
             result = func(*args, **kwargs)
-            print(colored("Done with ", 'magenta') + colored(func.__name__, 'green') + colored(f" in {time.time() - start_time} sec", "magenta"))
+            rounded_time = decimal.Decimal(str(time.time() - start_time)).quantize(decimal.Decimal('.0001'), rounding=decimal.ROUND_HALF_UP)
+            print(colored("Done with ", 'magenta') + colored(func.__name__, 'green') + colored(f" in {rounded_time} sec", "magenta"))
             return result
         except Exception as e:
             cprint(f"Caught an exception at {func.__name__}: '{str(e)}'", "red")

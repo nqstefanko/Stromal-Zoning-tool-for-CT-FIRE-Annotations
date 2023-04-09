@@ -115,7 +115,7 @@ class MainFrame:
         
         self.draw_annotations_textbox = tk.Entry(self.frame)
         self.draw_annotations_textbox.grid(row=1, column=1, padx=5, pady=5)
-        self.draw_annotations_label = tk.Label(self.frame, text="- CSV Annotations Names to draw (Default: All)")
+        self.draw_annotations_label = tk.Label(self.frame, text="- CSV Annotations to draw. Names or Indexes (Default: All)")
         self.draw_annotations_label.grid(row=1, column=2, padx=5, pady=5, sticky="W")
 
         # Draw Fibers
@@ -131,18 +131,11 @@ class MainFrame:
         self.bucket_fibers_textbox = tk.Entry(self.frame, textvariable=self.bucket_fibers_text)
         self.bucket_fibers_textbox.grid(row=4, column=1, padx=5, pady=5, sticky="W")
 
-        self.bucket_fibers_description_label = tk.Label(self.frame, text="- CSV Annotations Names to bucket on (Default: All)")
+        self.bucket_fibers_description_label = tk.Label(self.frame, text="- CSV Annotations to bucket on. Names or Indexes (Default: All)")
         self.bucket_fibers_description_label.grid(row=4, column=2, padx=5, pady=5, sticky="W")
         
         self.bucket_fibers_label = tk.Label(self.frame, text="Fibers currently UNBUCKETED!", fg= "red")
         self.bucket_fibers_label.grid(row=5,padx=5, pady=5, sticky="W")
-        
-        # self.bucket_indexes_text = tk.StringVar()
-        # self.bucket_indexes_textbox = tk.Entry(self.frame, textvariable=self.bucket_indexes_text)
-        # self.bucket_indexes_textbox.grid(row=5, column=1, padx=5, pady=5, sticky="W")
-
-        # self.bucket_indexes_description_label = tk.Label(self.frame, text="- CSV Indexes to bucket on (Default: None)")
-        # self.bucket_indexes_description_label.grid(row=5, column=2, padx=5, pady=5, sticky="W")
         
         # Display Edited Image Button
         self.display_edited_image_button = tk.Button(self.display_save_frame, bg='cyan', text='Display Edited Image', command=self.display_image)
@@ -223,7 +216,8 @@ class MainFrame:
         anno_file = self.geojson_fileselector.file_text.get()
          
         if img_file == '' or mat_file == '' or anno_file == '':
-            cprint("All files must be set! Objects not set!", "red")
+            cprint("All files must be set! Object not set!", "red")
+            msg_box.showerror("Set Objects Error", "All files must be set! Object not set!")
             return 
 
         self.backend = GUI_Helper(img_file, mat_file, anno_file)
@@ -245,10 +239,10 @@ class MainFrame:
         self.backend.DRAW_HELPER.reset()
     
         if(self.draw_annotations_var.get()):
-            cprint("Drawing them ANNOTATIONS brother", 'magenta')
+            cprint("\tDrawing ANNOTATIONS...", 'cyan')
+            
             if self.draw_annotations_textbox.get():
                 values_to_draw = [x.strip() for x in self.draw_annotations_textbox.get().split(',')]
-
                 anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(values_to_draw)
                 self.backend.DRAW_HELPER.draw_annotations(
                     self.backend.ANNOTATION_HELPER.get_annotations_from_indexes(anno_indexes),
@@ -258,7 +252,7 @@ class MainFrame:
                                                           draw_anno_indexes=self.draw_annotations_info_var.get()) # draw_anno_indexes = False
 
         if(self.draw_fibers_var.get()):
-            cprint("Drawing them FIBERS brother", 'magenta')
+            cprint("\tDrawing FIBERS...", 'cyan')
             verts = self.backend.CTF_OUTPUT.fibers
             widths = self.backend.CTF_OUTPUT.fiber_widths
             if(self.backend.bucketed_fibers is not None and self.draw_fibers_textbox.get()):
@@ -269,7 +263,8 @@ class MainFrame:
                 
         if(self.backend.bucketed_fibers is not None):
             if(self.draw_zones_var.get()):
-                cprint("Drawing them ZONES brother", 'magenta')
+                cprint("\tDrawing ZONES...", 'cyan')
+                
                 zone_boundaries = [0, 50, 150]
                 if(self.csv_boundaries_text.get()):
                     zone_boundaries = self.split_string_to_ints(self.csv_boundaries_text.get())
@@ -372,7 +367,6 @@ class MainFrame:
         if(self.csv_boundaries_text.get()):
             zone_boundaries = self.split_string_to_ints(self.csv_boundaries_text.get())
         zone_bound_len = len(zone_boundaries) + 1
-        print(f"HERE IS THE ZONE BOUNDARY: {zone_boundaries, self.csv_boundaries_text.get()}")
         
         widths = self.backend.CTF_OUTPUT.fiber_widths
         width_avgs = get_average_value_per_zone(widths, self.backend.bucketed_fibers, zone_bound_len)
@@ -389,18 +383,17 @@ class MainFrame:
         return width_avgs, len_avgs, ang_avgs, zone_boundaries
 
     def display_signal_densities(self):
-        sig_dens, zone_boundaries = self.calc_signal_densities()
+        sig_dens, act_counts, zone_boundaries = self.calc_signal_densities()
         sig_dens_str = "\nSignal Densities:"
         for i in range(len(zone_boundaries) + 1):
             sig_dens_str+= f"\n\tZone {i}: signal density: {'{0:.2%}'.format(sig_dens[i])}"
-        msg_box.showinfo("Signla Density Info", sig_dens_str)
-        sig_dens_str+=f"\n\tList Form: {sig_dens}\n"
-        # tab_list = str(sig_dens).replace(',', '\t')
-        # sig_dens_str+=f"\tList Form: {tab_list}\n"
+        msg_box.showinfo("Signal Density Info", sig_dens_str)
+        sig_dens_str+=f"\n\tList Form: {sig_dens}"
+        sig_dens_str+=f"\n\tCounts per Zone: {act_counts}\n"
         cprint(sig_dens_str, 'cyan')
 
     def calc_signal_densities(self):
-        cprint("Calculating Signal Density", 'magenta')
+        cprint("Calculating Signal Density", 'cyan')
         lengths = self.backend.CTF_OUTPUT.get_fiber_lengths()
         widths = self.backend.CTF_OUTPUT.fiber_widths
         
@@ -414,8 +407,8 @@ class MainFrame:
         anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(annotations_to_draw)
         zones = self.backend.ANNOTATION_HELPER.get_final_union_zones(zone_boundaries, anno_indexes)
             
-        sig_dens = get_signal_density_overall(lengths, widths, zones, self.backend.bucketed_fibers)
-        return sig_dens, zone_boundaries
+        sig_dens, act_counts = get_signal_density_overall(lengths, widths, zones, self.backend.bucketed_fibers)
+        return sig_dens, act_counts, zone_boundaries
     
     def display_combination_signal_densities(self):
         singnal_dens_only_stromal, zones_to_combo = self.calc_combination_signal_densities()
@@ -426,7 +419,7 @@ class MainFrame:
         cprint(combo_sig_dens_str, 'cyan')
 
     def calc_combination_signal_densities(self):
-        cprint("Calculating Combination Signal Density", 'magenta')
+        cprint("Calculating Combination Signal Density", 'cyan')
         lengths = self.backend.CTF_OUTPUT.get_fiber_lengths()
         widths = self.backend.CTF_OUTPUT.fiber_widths
         
@@ -475,10 +468,10 @@ class MainFrame:
                                                       annotations_to_use, lengths, widths)
     
     def export_info(self):
-        print(f"Exporting Information to {self.export_info_text.get()}...")
-       
         filename = fd.asksaveasfilename(defaultextension=".txt", filetypes=[("text", "*.txt")])
         if filename:
+            print(f"Exporting Information to {filename}...")
+            
             self.export_info_text.set(filename)    
             np.savetxt(filename, self.backend.bucketed_fibers, delimiter='\t')
     
@@ -487,7 +480,7 @@ class MainFrame:
                 np.save(f"{os.path.splitext(filename)[0]}.npy", self.backend.bucketed_fibers)
                     
             width_avgs, len_avgs, ang_avgs, zone_bounds = self.calc_averages()
-            sig_dens, zone_boundaries = self.calc_signal_densities()
+            sig_dens, act_counts, zone_boundaries = self.calc_signal_densities()
 
             if(self.bucket_fibers_text.get()):
                 annotations_selected = self.bucket_fibers_text.get()
@@ -502,6 +495,7 @@ class MainFrame:
                 },
                 'Signal Densities per Annotation': list(self.calc_sig_dens_per_anno()),
                 'Signal Densities': sig_dens,
+                'Actual Counts': act_counts,
                 'Zones': zone_bounds,
                 'Annotations Bucketed On': annotations_selected,
                 'Annotation Indexes Bucketed On': self.backend.annotations_indexes_bucketed_on,
@@ -513,8 +507,7 @@ class MainFrame:
             with open(f"{os.path.splitext(filename)[0]}.json", 'w') as fp:
                 json.dump(test_dict, fp, sort_keys=True, indent=2)
             
-            self.save_as_tsv(test_dict, filename)
-                # filename = fd.asksaveasfilename(defaultextension=".json", filetypes=[("JSON", "*.json")])
+            self.save_as_tsv(test_dict, filename) 
     
     def save_as_tsv(self, json_dict, filename):
         tsv_data = ""
@@ -643,7 +636,7 @@ class ImageWindow:
                 # self.background.configure(image =  self.background_image)
                 # break
                  
-                  
+
 def main(): 
     root = Tk()
     root.title("DCIS Helper")

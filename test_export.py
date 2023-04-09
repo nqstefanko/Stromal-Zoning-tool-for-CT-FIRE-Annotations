@@ -48,7 +48,7 @@ from shapely.plotting import plot_polygon
 #     IMG_DIMS = img.size
 
 
-COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue']
+COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue', 'orange', 'pink', 'brown']
 
 class DrawingHelper():
     def __init__(self, tif_file=None) -> None:
@@ -165,7 +165,6 @@ class DrawingHelper():
         
         self.image = Image.alpha_composite(self.image, self.rgbimg)
 
-    @print_function_dec
     def draw_overlay(self, draw_functions):
         for draw_function in draw_functions:
             draw_function()
@@ -189,7 +188,6 @@ class DrawingHelper():
                 self.draw_image.line(verts[i].flatten().astype(np.float32), width=int(round(widths[i])), fill=tuple(np.random.choice(range(256), size=3)), joint="curve")
         self.image = Image.alpha_composite(self.image, self.rgbimg)
 
-    @print_function_dec
     def reset(self, new_tif=None):
         if(new_tif):
             self.tif_file = new_tif
@@ -237,7 +235,6 @@ class PlottingHelper():
                 ycent = fixed_y_annotation_poly.centroid.coords.xy[1][0]
                 self.ax.text(xcent, ycent, f'{annotation.original_index, annotation.name}', fontsize=12, color='orange')
     
-    @print_function_dec
     def _plot_zones(self, list_of_union_zones, to_plot=[], colors = COLORS):
         for i in range(len(list_of_union_zones)):
             # 0 is Stromal, 1 is mid, 2 is epith, 3 is annotation itself
@@ -262,7 +259,6 @@ class PlottingHelper():
                 y_points = np.abs(verts[i][:, 1].astype('int16') - self.img_dims[1])
                 self.ax.plot(x_points, y_points, linestyle="-")
 
-    @print_function_dec
     def plot_final_overlay(self, fibers, annotations, zones, save_plot_as_img=None):
         self._plot_zones(zones)
         self._plot_annotations(annotations)
@@ -357,7 +353,6 @@ def bucket_the_fibers(fibers, centroids, annotations, buckets=np.array([0, 50, 1
         fibers_bucketed[i] = bucket_fibers
     return fibers_bucketed
 
-@print_function_dec
 def get_signal_density_per_annotation(bucketed_fibers_annotation_indexed, annotation, lengths, widths):
     fibs_inds_in_anno = np.where(bucketed_fibers_annotation_indexed == 0)
     length_of_fibs_in_anno = lengths[fibs_inds_in_anno]
@@ -390,8 +385,7 @@ def get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones):
     for i in range(len(bucketed_fibers)):
         final_counts[labeled_fibers[i]] +=  lengths[i] * widths[i]
         actual_counts[labeled_fibers[i]] +=  1
-    print(f"get_fiber_area_per_zone - Actual Counts: {actual_counts}")
-    return final_counts
+    return final_counts, actual_counts
 
 def get_signal_density_per_zone(final_union_of_zones, final_counts):
     final_densities = []
@@ -407,8 +401,8 @@ def get_signal_density_per_zone(final_union_of_zones, final_counts):
 def get_signal_density_overall(lengths, widths, final_union_of_zones,  bucketed_fibers):
     #FOR BUCKETED FIBERS:  0 is annotation, 1 is epith, 2 is mid, 3 is stromal
     len_of_zones = len(final_union_of_zones)
-    final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones)
-    return get_signal_density_per_zone(final_union_of_zones, final_counts)
+    final_counts, actual_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones)
+    return get_signal_density_per_zone(final_union_of_zones, final_counts), actual_counts
 
 def get_signal_density_per_desired_zones(lengths, widths, final_union_of_zones, bucketed_fibers, zones):
     final_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len(final_union_of_zones))

@@ -30,7 +30,7 @@ class CTFIREOutputHelper():
     def __getitem__(self, key):
         return self._ctfire_dict[key]
 
-    # Never should change
+    # Properties Never should change
     @property
     def ctfire_dict(self):
         return self._ctfire_dict    

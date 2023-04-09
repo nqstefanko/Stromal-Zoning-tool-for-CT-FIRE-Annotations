@@ -79,7 +79,7 @@ class MainFrame:
         self.display_button.grid(row=0, column=4, padx=5, pady=5)
         
         # Create a button to set the GUI_Helper Object
-        self.set_up_object_button = tk.Button(self.fileselector_frame, text='Set Up Objects', command=self.set_objects)
+        self.set_up_object_button = tk.Button(self.fileselector_frame, text='Set Up Object', command=self.set_objects)
         self.set_up_object_button.grid(row=4, column=0)
         
         # Create a button to set the GUI_Helper Object

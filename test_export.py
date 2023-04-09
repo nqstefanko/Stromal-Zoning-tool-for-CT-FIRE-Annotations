@@ -56,52 +56,54 @@ class DrawingHelper():
         self.rgbimg =  self._convert_grayscale_tif_to_color()
         self.draw_image = ImageDraw.Draw(self.rgbimg)
 
-    def _draw_polygon_helper(self, polygon, color):
-        "NOTE: TECHNICALLY THIS IS NOT CORRECT YET BECAUSE DRAWING OVER WITH ALPHA 0 STILL DRAWS OVER WHAT IS THERE."
+    def _draw_polygon_helper(self, polygon, color, annos, to_draw):
+        """There is more complication to the fact that the polygons themselves are not the same! They can either be a polygon with a 
+        MultiString Boundary or a LineString Boundary (or a linearRing from the interior of a MultiString). So we need to tackle these separately"""
         if type(polygon.boundary) == shapely.geometry.MultiLineString:
             if len(polygon.boundary.geoms) > 0:
+                
                 filling = ImageColor.getrgb(color) + (32,)
-                lining = ImageColor.getrgb(color) + (64,)
-                geom = polygon.boundary.geoms[0]
-                coords =  geom.coords.xy[0]
                 ext_x_coords = np.array(polygon.boundary.geoms[0].coords.xy[0]).astype('float32')
                 ext_y_coords = np.array(polygon.boundary.geoms[0].coords.xy[1]).astype('float32')
                 final_ext = np.vstack((ext_x_coords, ext_y_coords)).T.flatten()
-                print(f"Drawing Multiline Polygon: {color}")
-                self.draw_image.polygon(final_ext, width=5, fill=filling, outline=lining)
+                self.draw_image.polygon(final_ext, fill=filling, outline=ImageColor.getrgb(color) + (128,))
 
-                for i in range(len(polygon.boundary.geoms)-1):
-                    geo = polygon.boundary.geoms[i+1]
-                    int_x_coords = np.array(geo.coords.xy[0]).astype('float32')
-                    int_y_coords = np.array(geo.coords.xy[1]).astype('float32')
-                    final_int = np.vstack((int_x_coords, int_y_coords)).T.flatten()
-                    print(f"ERASING Multiline Polygon: {color}")
-                    self.draw_image.polygon(final_int, width=5, outline=lining, fill=(255, 255, 255, 0))
-                
+            for interior in polygon.interiors:
+                if(annos.contains(interior.centroid)):
+                    temp_color = COLORS[COLORS.index(color) - 1]
+                else:
+                    temp_color = COLORS[COLORS.index(color) + 1]
+                if(COLORS.index(temp_color) in to_draw or not to_draw):
+                    self._draw_polygon_helper(interior, temp_color, annos, to_draw)
+                else:
+                    poly = shapely.geometry.Polygon(interior)
+
+                    self.draw_image.polygon(np.array(poly.exterior.coords).astype('float32'),
+                                            fill=ImageColor.getrgb(color) + (0,), outline=ImageColor.getrgb(color) + (128,))
+
+        elif type(polygon) == shapely.geometry.LinearRing:
+            # Create a new Polygon instance with the LinearRing as the exterior and an empty list as the interiors
+            poly = shapely.geometry.Polygon(polygon)
+            self.draw_image.polygon(np.array(poly.exterior.coords).astype('float32'), fill=ImageColor.getrgb(color) + (32,), outline=ImageColor.getrgb(color) + (128,))
         else:
-            print(f"Drawing Polygon: {color}")
-            coords = np.array(polygon.exterior.coords).astype('float32')
-            filling = ImageColor.getrgb(color) + (32,)
-            lining = ImageColor.getrgb(color) + (64,)
-            self.draw_image.polygon(coords, width=5, fill=filling, outline=lining)
-    
-    def _draw_helper(self, final_union_poly, color):
-        if(type(final_union_poly) == shapely.geometry.multipolygon.MultiPolygon):
+            self.draw_image.polygon(np.array(polygon.exterior.coords).astype('float32'), fill=ImageColor.getrgb(color) + (32,), outline=ImageColor.getrgb(color) + (128,))
+        
+    def _draw_helper(self, final_union_poly, color, annos, to_draw):
+        """All of the polygons that are generated from our unioning/intersecting/differencing can either be a MutliPolygon or a Polygon,
+        and we need to address these differently"""
+        if type(final_union_poly) == shapely.geometry.MultiPolygon:
             for polygon in final_union_poly.geoms:
-                self._draw_helper(polygon, color)
-        else:
-            self._draw_polygon_helper(final_union_poly, color) 
+                self._draw_helper(polygon, color, annos, to_draw)
+        elif type(final_union_poly) == shapely.geometry.Polygon:
+            self._draw_polygon_helper(final_union_poly, color, annos, to_draw)
     
-    def draw_zones(self, list_of_union_zones, to_draw=[],  colors = COLORS):
-        list_to_draw = list(to_draw)
-        # for i in range(len(list_of_union_zones)):
-        for i in reversed(range(len(list_of_union_zones))):
+    def draw_zones(self, list_of_union_zones, to_draw=[], colors=COLORS):
+        "This lad helps draw FILLED IN Zones."
+        for i, final_union_zone_polygon in enumerate(list_of_union_zones):
             # 0 is Stromal, 1 is mid, 2 is epith, 3 is annotation itself
-            if((not list_to_draw or i in list_to_draw) and list_of_union_zones[i].area > 0):
-                final_union_zone_polygon = list_of_union_zones[i]
-                cprint(f"{i, f'{final_union_zone_polygon.area:,}', colors[i]}", colors[i])
-                self._draw_helper(final_union_zone_polygon, colors[i]) 
-        self.image = Image.alpha_composite(self.image, self.rgbimg)
+            if (not to_draw or i in to_draw) and final_union_zone_polygon.area > 0:
+                color = colors[i % len(colors)]
+                self._draw_helper(final_union_zone_polygon, color, list_of_union_zones[0], to_draw)
     
     def _draw_zone_outline_helper(self, polygon, colors, current_depth, to_draw):
         color = colors[current_depth]
@@ -179,7 +181,6 @@ class DrawingHelper():
         composite_image.save(final_path)
         return final_path
  
-    @print_function_dec
     def draw_fibers_per_zone(self, verts, widths, bucketed_fibers, to_draw = [0, 1, 2, 3]):
         labeled_fibers = bucketed_fibers.min(axis=1)
         for bucket in to_draw:
@@ -443,3 +444,60 @@ if __name__ == '__main__':
     pass
 
 
+
+
+
+    # def _draw_polygon_helper(self, polygon, color):
+    #     "NOTE: TECHNICALLY THIS IS NOT CORRECT YET BECAUSE DRAWING OVER WITH ALPHA 0 STILL DRAWS OVER WHAT IS THERE."
+    #     if type(polygon.boundary) == shapely.geometry.MultiLineString:
+    #         if len(polygon.boundary.geoms) > 0:
+    #             filling = ImageColor.getrgb(color) + (32,)
+    #             lining = ImageColor.getrgb(color) + (64,)
+    # self.draw_image.polygon(final_ext, width=5, fill=filling, outline=lining)
+    #             geom = polygon.boundary.geoms[0]
+    #             coords =  geom.coords.xy[0]
+    #             ext_x_coords = np.array(polygon.boundary.geoms[0].coords.xy[0]).astype('float32')
+    #             ext_y_coords = np.array(polygon.boundary.geoms[0].coords.xy[1]).astype('float32')
+    #             final_ext = np.vstack((ext_x_coords, ext_y_coords)).T.flatten()
+    #             print(f"Drawing Multiline Polygon: {color}")
+    #             self.draw_image.polygon(final_ext, width=5, fill=filling, outline=lining)
+
+    #             for i in range(len(polygon.boundary.geoms)-1):
+    #                 geo = polygon.boundary.geoms[i+1]
+    #                 int_x_coords = np.array(geo.coords.xy[0]).astype('float32')
+    #                 int_y_coords = np.array(geo.coords.xy[1]).astype('float32')
+    #                 final_int = np.vstack((int_x_coords, int_y_coords)).T.flatten()
+    #                 print(f"ERASING Multiline Polygon: {color}")
+    #                 self.draw_image.polygon(final_int, width=5, outline=lining, fill=(255, 255, 255, 0))
+                
+    #     else:
+    #         print(f"Drawing Polygon: {color}")
+    #         coords = np.array(polygon.exterior.coords).astype('float32')
+    #         filling = ImageColor.getrgb(color) + (32,)
+    #         lining = ImageColor.getrgb(color) + (64,)
+    #         self.draw_image.polygon(coords, width=5, fill=filling, outline=lining)
+    
+    # def _draw_helper(self, final_union_poly, color):
+    #     if(type(final_union_poly) == shapely.geometry.multipolygon.MultiPolygon):
+    #         for polygon in final_union_poly.geoms:
+    #             self._draw_helper(polygon, color)
+    #     else:
+    #         self._draw_polygon_helper(final_union_poly, color) 
+    
+    # def draw_zones(self, list_of_union_zones, to_draw=[],  colors = COLORS):
+    #     list_to_draw = list(to_draw)
+    #     for i in range(len(list_of_union_zones)):
+    #         # 0 is Stromal, 1 is mid, 2 is epith, 3 is annotation itself
+    #         if((not list_to_draw or i in list_to_draw) and list_of_union_zones[i].area > 0):
+    #             final_union_zone_polygon = list_of_union_zones[i]
+    #             cprint(f"{i, f'{final_union_zone_polygon.area:,}', colors[i]}", colors[i])
+    #             self._draw_helper(final_union_zone_polygon, colors[i]) 
+    #     self.image = Image.alpha_composite(self.image, self.rgbimg)
+    
+    
+                    # for i in range(len(polygon.boundary.geoms)-1):
+                #     geo = polygon.boundary.geoms[i+1]
+                #     int_x_coords = np.array(geo.coords.xy[0]).astype('float32')
+                #     int_y_coords = np.array(geo.coords.xy[1]).astype('float32')
+                #     final_int = np.vstack((int_x_coords, int_y_coords)).T.flatten()
+                #     self.draw_image.polygon(final_int, width=5, outline=ImageColor.getrgb(color) + (64,), fill=(255, 255, 255, 0))

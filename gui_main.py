@@ -33,6 +33,7 @@ MATLAB_FILETYPES = (
 
 class FileSelector:
     def __init__(self, frame, user_text, row_num, file_types) -> None:
+        # Initialize the file selector with a label, entry field, and browse and clear buttons
         self.filetypes = file_types
         self.file_label = tk.Label(frame, text=user_text)
         self.file_label.grid(row=row_num, column=0, padx=5, pady=5)
@@ -45,11 +46,13 @@ class FileSelector:
         self.file_clear_button.grid(row=row_num, column=3, padx=5, pady=5)
 
     def browse_files(self):
+        # Open a file dialog and set the file text if a file is selected
         filename = fd.askopenfilename(title='Open a file', filetypes=self.filetypes)
         if filename:
             self.file_text.set(filename)
         
     def clear_file(self):
+        # Clear the file text
         self.file_text.set('')
 
 class MainFrame: 
@@ -277,10 +280,8 @@ class MainFrame:
 
                 to_draw = list(np.arange(len(zones)))
                 if(self.draw_zones_textbox.get()):
-                    cprint(f'Cancer {self.draw_zones_textbox.get()}', 'cyan')
                     to_draw = self.split_string_to_ints(self.draw_zones_textbox.get())
-                self.backend.DRAW_HELPER.draw_zone_outlines(zones, to_draw=to_draw) #  to_draw=[1, 3]
-                # self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw) #  to_draw=[1, 3]
+                self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw) #  to_draw=[1, 3]
 
     def display_image(self):
         filename = self.img_fileselector.file_text.get()
@@ -310,7 +311,7 @@ class MainFrame:
     def bucket_the_fibers(self):
         """Note: This function is threaded because the bucketing is not the fastest thing in the west"""
         if(self.backend):
-            self.bucket_fibers_label.config(text='Bucketing Fibers...!', fg= "orange")
+            self.bucket_fibers_label.config(text='Bucketing Fibers...', fg= "orange")
             fibers = self.backend.CTF_OUTPUT.fibers
             centroids = self.backend.CTF_OUTPUT.centroids
             
@@ -324,7 +325,10 @@ class MainFrame:
             zone_boundaries = [0, 50, 150]
             if(self.csv_boundaries_textbox.get()):
                 zone_boundaries = self.split_string_to_ints(self.csv_boundaries_textbox.get())
-            
+                if zone_boundaries is None:
+                    self.bucket_fibers_label.config(text="Fibers currently UNBUCKETED!", fg="red")
+                    return
+
             def bucket_fibers():
                 self.backend.bucket_the_fibers(fibers, centroids, annotations_to_use, zone_boundaries)
                 self.backend.annotations_indexes_bucketed_on = anno_indexes 
@@ -623,19 +627,16 @@ class ImageWindow:
             widths = self.gui_helper.CTF_OUTPUT.fiber_widths
             for anno in self.gui_helper.ANNOTATION_HELPER.annotations:
                 if(anno.geo_polygon.contains(corrected_point)):
-                    print(f"{corrected_point} - {anno} \nSignal Density: {get_signal_density_per_annotation(self.gui_helper.bucketed_fibers[:, anno.original_index], self.gui_helper.ANNOTATION_HELPER.annotations[anno.original_index], lengths, widths)}\n")
-
-        # For the 2nd annotation
-        
-                # draw = ImageDraw.Draw(self.img_copy)
-                # draw.polygon(anno.geo_polygon.exterior.coords, outline='red')
-                # del draw
-                # # Update the displayed image
-                # self.image = self.img_copy.resize((self.image.size[0], self.image.size[1]))
-                # self.background_image = ImageTk.PhotoImage(self.image)
-                # self.background.configure(image =  self.background_image)
-                # break
-                 
+                    if(self.gui_helper.bucketed_fibers):
+                        signal_dens = get_signal_density_per_annotation(
+                            self.gui_helper.bucketed_fibers[:, anno.original_index],
+                            self.gui_helper.ANNOTATION_HELPER.annotations[anno.original_index],
+                            lengths, widths
+                        )
+                        print(f"{corrected_point} - {anno} \nSignal Density: {signal_dens}\n")
+                    else:
+                        print(f"{corrected_point} - {anno}\n")
+                           
 
 def main(): 
     root = Tk()
@@ -649,3 +650,17 @@ def main():
     
 if __name__ == '__main__':
     main()
+
+
+
+                        
+        # For the 2nd annotation
+    
+                # draw = ImageDraw.Draw(self.img_copy)
+                # draw.polygon(anno.geo_polygon.exterior.coords, outline='red')
+                # del draw
+                # # Update the displayed image
+                # self.image = self.img_copy.resize((self.image.size[0], self.image.size[1]))
+                # self.background_image = ImageTk.PhotoImage(self.image)
+                # self.background.configure(image =  self.background_image)
+                # break

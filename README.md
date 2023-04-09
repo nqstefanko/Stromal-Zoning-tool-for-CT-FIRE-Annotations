@@ -54,12 +54,14 @@ Once the fibers are bucketed, you will be given the new final set of options:
     - Compress Numpy Bucket Array: Clicking this button will create an additional npy file that has the bucket fibers array. You will need to export this information if you wish to import the bucket fiber array. 
 
 
+### In the Image Window:
+One additional functionality that the user may find helpful is, if they are displaying a window. If they click any part of the window and the clicked point is in an annoation, it will display information about the annotation. Ex: POINT (1179.375 1863.875) - Annotation DCIS, 26, [255, 0, 255], (1457, 2)
 
-### Running the code: 
+
+## Running the code: 
 ```sh
-python -m venv /path/to/new/virtual/environment
-./venv/source/activiate
+python -m venv .\path\to\new\venv
+.\venv\Scripts\activiate
 pip install -r requirements.txt
 python3 gui_boi.py
 ```
-<!-- ![alt text](image_of_gui.png "Title") -->

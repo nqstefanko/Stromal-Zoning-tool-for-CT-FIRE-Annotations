@@ -152,8 +152,7 @@ if draw_tests:
 
     # CURRENTLY BROKEN
     def test_draw_all_zones():
-        """CURRENTLY BROKEN"""
-        zones = ANNOTATION_HELPER.get_final_union_zones([0, 50, 150], []) # 
+        """CURRENTLY BROKEN""" 
         indexes = ANNOTATION_HELPER.get_annotation_indexes()
         zones = ANNOTATION_HELPER.get_final_union_zones([0, 50, 150], indexes) # 
         DRAW_HELPER.draw_zones(zones)
@@ -162,7 +161,9 @@ if draw_tests:
     # CURRENTLY BROKEN        
     def test_draw_specific_zones(to_draw=[]):
         """CURRENTLY BROKEN"""
-        zones = ANNOTATION_HELPER.get_final_union_zones([0, 25, 50, 150], []) # 
+        indexes = ANNOTATION_HELPER.get_annotation_indexes()    
+        zones = ANNOTATION_HELPER.get_final_union_zones([0, 50, 150], indexes) #
+        # zones = ANNOTATION_HELPER.get_final_union_zones([0, 25, 50, 150], []) # 
         DRAW_HELPER.draw_zones(zones, to_draw)
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
 
@@ -200,12 +201,15 @@ if draw_tests:
     # test_draw_fibers()
     # test_all_draw_fibers()
     
-    # test_draw_all_zones() # BROKEN
-    # test_draw_specific_zones([1,2,3]) # BROKEN
+    # test_draw_all_zones() # BROKEN? Maybe not?
+    # test_draw_specific_zones([1, 3]) # BROKEN? Maybe not?
     
     # test_draw_zone_outlines()
     # test_draw_zone_outlines_specific([1,3])
     # test_draw_overlay()
+    ############ MANUAL DRAWING/DRAW_HELPER TESTS: ############
+    # test_plot_all_zones()
+    test_plot_specific_zones(to_plot=[1, 3])
 
 if zone_tests:
     def test_draw_fibers_per_zone_single_zone():

@@ -25,26 +25,28 @@ fiber_buckets_simulation = np.array([
     [0, 2, 3], #Fiber
     [0, 3, 3], #Fiber
     [3, 3, 3], #Fiber
+#Ann 0  1  2
     #Each col is bucketed
 ])
 
 fibers_simulation = np.array([
     [1, 1, 1, 1],
     [2, 2, 2, 2],
-    [3,3,3,3],
-    [4,4,4,4],
-    [5,5,5,5],
+    [3, 3, 3, 3],
+    [4, 4, 4, 4],
+    [5, 5, 5, 5],
 ])
 
 widths_simulation = np.array([4,5,6,7,8])
 length_simulation = np.array([1,2,3,4,5])
 
-x_simul = np.array([1,2,3,4,5])
-y_simul = np.array([1,2,3,4,5])
 
-print(np.vstack((x_simul, y_simul)).T)
 temp_test = np.array([0,2,3])
 temp_test2 = np.array([0, 10, 11, 4, 5, 12])
+
+# x_simul = np.array([1,2,3,4,5])
+# y_simul = np.array([1,2,3,4,5])
+# print(np.vstack((x_simul, y_simul)).T)
 
 # print(np.arange(4))
 # print(fibers_simulation[temp_test])

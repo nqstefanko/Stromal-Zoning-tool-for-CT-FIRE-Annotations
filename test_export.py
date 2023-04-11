@@ -43,7 +43,7 @@ def sort_by_area(lst):
         return elem[0].area
     return sorted(lst, key=get_area, reverse=True)
 
-COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue', 'orange', 'pink', 'brown']
+COLORS = ['green', 'magenta', 'yellow', 'red', 'cyan', 'white', 'blue', 'orange', 'pink', 'brown']
 class DrawingHelper():
     def __init__(self, tif_file=None) -> None:
         self.tif_file = tif_file
@@ -79,7 +79,7 @@ class DrawingHelper():
         elif type(final_union_poly) == shapely.geometry.Polygon:
             self._draw_polygon_helper(final_union_poly, color, annos, all_polys)
     
-    def draw_zones(self, list_of_union_zones, to_draw=[], colors=COLORS):
+    def draw_zones(self, list_of_union_zones, to_draw=[], colors=COLORS, opacity=32):
         "This lad helps draw FILLED IN Zones."
         all_polys = []
         for i, final_union_zone_polygon in enumerate(list_of_union_zones):
@@ -90,8 +90,8 @@ class DrawingHelper():
         sorted_list = sort_by_area(all_polys)
         for poly_list in sorted_list:
             if(COLORS.index(poly_list[1]) in to_draw or not to_draw):
-                self.draw_image.polygon(np.array(poly_list[0].exterior.coords).astype('float32'),
-                                        fill=ImageColor.getrgb(poly_list[1]) + (32,), outline=ImageColor.getrgb(poly_list[1]) + (128,))
+                self.draw_image.polygon(np.array(poly_list[0].exterior.coords).astype('float32'), width=4,
+                                        fill=ImageColor.getrgb(poly_list[1]) + (opacity,), outline=ImageColor.getrgb(poly_list[1]) + (128,))
             else:
                 self.draw_image.polygon(np.array(poly_list[0].exterior.coords).astype('float32'),
                                         fill=ImageColor.getrgb(poly_list[1]) + (0,), width=3, outline=ImageColor.getrgb(poly_list[1]) + (0,))

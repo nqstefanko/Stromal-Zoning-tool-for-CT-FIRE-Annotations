@@ -172,6 +172,13 @@ class MainFrame:
         self.draw_zones_label = tk.Label(self.bucketed_frame, text="- CSV values for zones to draw (Default: All)")
         self.draw_zones_label.grid(row=1, column=2, padx=5, pady=5, sticky="W")
 
+        self.draw_zones_opacity_text = tk.StringVar()
+        self.draw_zones_opacity_textbox = tk.Entry(self.bucketed_frame, textvariable=self.draw_zones_opacity_text, width=10)
+        self.draw_zones_opacity_textbox.grid(row=1, column=3, padx=5, pady=5, sticky="W")
+        
+        self.draw_zones_opacity_label = tk.Label(self.bucketed_frame, text="Opacity (0-256)")
+        self.draw_zones_opacity_label.grid(row=1, column=3, padx=5, pady=5, sticky="E")
+        
         # Calculate the averages button:
         self.get_averages_button = tk.Button(self.bucketed_frame, text='Calculate Averages', command=self.display_averages)
         self.get_averages_button.grid(row=2, padx=5, pady=5, sticky="W")
@@ -280,11 +287,30 @@ class MainFrame:
                 anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(annotations_to_draw)
                 zones = self.backend.ANNOTATION_HELPER.get_final_union_zones(zone_boundaries, anno_indexes)
 
+                opacity = self.draw_zones_opacity_textbox.get()
+                if opacity:
+                    try:
+                        int(opacity)
+                        opacity = int(opacity)
+                        if(opacity > 256 or opacity < 0):
+                            opacity = max(min(opacity, 256), 0)
+                            cprint("Opacity Not In Correct Range", 'red')
+                    except ValueError:
+                        opacity = ''
+                        cprint("Opacity Has to be a number from 0-256. Setting to 32", 'red')
+                        msg_box.showerror("Opacity Error", "Opacity Has to be a number from 0-256")
+                
+                if opacity == '':
+                    opacity = 32
+                
+                self.draw_zones_opacity_text.set(str(opacity))
+        
+                
                 to_draw = list(np.arange(len(zones)))
                 if(self.draw_zones_textbox.get()):
                     to_draw = self.split_string_to_ints(self.draw_zones_textbox.get())
                 # self.backend.DRAW_HELPER.draw_zone_outlines(zones, to_draw=to_draw) #  to_draw=[1, 3]
-                self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw) #  to_draw=[1, 3]
+                self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw, opacity=opacity) #  to_draw=[1, 3]
 
     def display_image(self):
         filename = self.img_fileselector.file_text.get()
@@ -318,10 +344,12 @@ class MainFrame:
                 zone_boundaries = self.split_string_to_ints(self.csv_boundaries_textbox.get())
                 if zone_boundaries is None:
                     return
-                if('0' not in zone_boundaries):
+
+                if(0 not in zone_boundaries):
                     err_msg = f"Zero is required as first value for zones!"
                     msg_box.showerror("Zone Value Error", err_msg)
                     cprint(f"{err_msg}", 'red')
+                    self.csv_boundaries_text.set("")
                     return
 
             self.bucket_fibers_label.config(text='Currently Bucketing the Fibers...', fg= "orange")

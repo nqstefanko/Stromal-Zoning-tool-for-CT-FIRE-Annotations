@@ -8,7 +8,7 @@ from dcis_utils import print_function_dec
 
 class CTFIREOutputHelper():
     def __init__(self, mat_filepath):
-        """This helper is made to assist with getting the CTF output from the matfile"""
+        """This helper is made to assist with getting the CTF output from the matfile. It expects the basic Mat File."""
         # These values should more or less never be changed
         self._ctfire_dict = loadmat(mat_filepath)
         self._ctf_params = self.ctfire_dict['ctfP']['value'][0][0] 

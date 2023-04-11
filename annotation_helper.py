@@ -50,7 +50,10 @@ class AnnotationHelper():
             else:
                 classification = self.feature_collection_dict['properties']
             
-            name = classification['name']  # Ex: DCIS, Ignore
+            name = classification.get('name', "Unnamed") # Ex: DCIS, Ignore MAKE DEFAULT VALUE
+            if not classification.get('name'):
+                cprint(f"Annotation {i} Passed in without Name!", 'red')
+            
             color = classification.get('color', [255, 0, 0]) # Ex: [255, 0, 255]
             
             self.annotations.append(Annotation( name, color, np.array(points), i))

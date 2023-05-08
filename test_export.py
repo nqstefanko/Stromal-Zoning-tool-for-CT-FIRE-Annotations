@@ -80,7 +80,7 @@ class DrawingHelper():
         elif type(final_union_poly) == shapely.geometry.Polygon:
             self._draw_polygon_helper(final_union_poly, color, annos, all_polys)
     
-    def draw_zones(self, list_of_union_zones, to_draw=[], colors=COLORS, opacity=32):
+    def draw_zones(self, list_of_union_zones, delete_zones, to_draw=[], colors=COLORS, opacity=32):
         "This lad helps draw FILLED IN Zones."
         all_polys = []
         for i, final_union_zone_polygon in enumerate(list_of_union_zones):
@@ -88,15 +88,20 @@ class DrawingHelper():
             if final_union_zone_polygon.area > 0:
                 color = colors[i % len(colors)]
                 self._draw_helper(final_union_zone_polygon, color, list_of_union_zones[0], all_polys)
+        
+        if(delete_zones and delete_zones.area > 10):
+            color = 'clear'
+            self._draw_helper(delete_zones, color, delete_zones, all_polys)
+                    
         sorted_list = sort_by_area(all_polys)
         for poly_list in sorted_list:
             # print(poly_list[0].area, poly_list[1], COLORS.index(poly_list[1]) in to_draw)
-            if(COLORS.index(poly_list[1]) in to_draw or not to_draw):
+            if(poly_list[1] != 'clear' and (COLORS.index(poly_list[1]) in to_draw or not to_draw)):
                 self.draw_image.polygon(np.array(poly_list[0].exterior.coords).astype('float32'), width=4,
                                         fill=ImageColor.getrgb(poly_list[1]) + (opacity,), outline=ImageColor.getrgb(poly_list[1]) + (128,))
             else:
                 self.draw_image.polygon(np.array(poly_list[0].exterior.coords).astype('float32'),
-                                        fill=ImageColor.getrgb(poly_list[1]) + (0,), width=3, outline=ImageColor.getrgb(poly_list[1]) + (0,))
+                                        fill=ImageColor.getrgb('red') + (0,), width=3, outline=ImageColor.getrgb('red') + (0,))
        
     def _draw_zone_outline_helper(self, polygon, colors, current_depth, to_draw):
         color = colors[current_depth]
@@ -162,7 +167,6 @@ class DrawingHelper():
 
     def draw_fibers_colored_per_zone(self, verts, widths, fiber_zones):
         for i in range(len(verts)):
-            # to_add:to_add+5 - print(i, ctf_output.centeroidnp(verts[i + to_add][:, 0], verts[i + to_add][:, 1]))
             fill = ImageColor.getrgb(COLORS[fiber_zones[i]])
             self.draw_image.line(
                 verts[i].flatten().astype(np.float32),
@@ -170,7 +174,8 @@ class DrawingHelper():
                 fill=fill,
                 joint="curve"
             )
-    
+        self.image = Image.alpha_composite(self.image, self.rgbimg)
+
     def draw_overlay(self, draw_functions):
         for draw_function in draw_functions:
             draw_function()
@@ -185,11 +190,15 @@ class DrawingHelper():
         composite_image.save(final_path)
         return final_path
  
-    def draw_fibers_per_zone(self, verts, widths, bucketed_fibers, to_draw = [0, 1, 2, 3]):
+    def draw_fibers_per_zone(self, verts, widths, bucketed_fibers, to_draw = [0, 1, 2, 3], colored_zone = False):
         for bucket in to_draw:
             indexes_to_plot = np.where(bucketed_fibers == bucket)[0]
             for i in indexes_to_plot:
-                self.draw_image.line(verts[i].flatten().astype(np.float32), width=int(round(widths[i])), fill=tuple(np.random.choice(range(256), size=3)), joint="curve")
+                if(colored_zone):
+                    color_fill = COLORS[bucket]
+                else:
+                    color_fill = tuple(np.random.choice(range(256), size=3))
+                self.draw_image.line(verts[i].flatten().astype(np.float32), width=int(round(widths[i])), fill=color_fill, joint="curve")
         self.image = Image.alpha_composite(self.image, self.rgbimg)
      
     def reset(self, new_tif=None):
@@ -303,7 +312,10 @@ class GUI_Helper():
         self.bucketed_fibers = None
         self.crunched_fibers = None
         self.current_fibers = None
+        
         self.list_of_zones = None
+        self.delete_zones = None
+        
         self.combo_zones_numbers = {}
     
     @print_function_dec
@@ -333,34 +345,25 @@ class GUI_Helper():
         self.fiber_dists = fiber_dists 
         return fiber_dists
 
-    def get_bucket_for_each_fiber(self, buckets=np.array([0, 50, 150], dtype=int)):
+    def get_bucket_for_each_fiber(self, base_annos, buckets=np.array([0, 50, 150], dtype=int)):
         """Takes all distances for each fiber and anno, and gets a single bucket for each fiber that it falls into"""
         if self.fiber_dists is None:
             cprint("Fiber Distances Not Set. Cannot Bucket!", "red")
             return 
-        return np.digitize(np.min(self.fiber_dists, axis=1), buckets, right=True).astype(int)
+        return np.digitize(np.min(self.fiber_dists[:, base_annos], axis=1), buckets, right=True).astype(int)
 
-    def get_crunched_fibers(fiber_dists, anno_indexes, buckets=np.array([0, 50, 150])):
-        all_bucketed_fibers = get_bucket_for_each_fiber(fiber_dists, buckets)
-        all_bucketed_fibers_of_selected_values = get_bucket_for_each_fiber(fiber_dists[:, anno_indexes], buckets)
-        final_crunched = _create_new_array(all_bucketed_fibers, all_bucketed_fibers_of_selected_values, len(buckets))
-        return final_crunched
+    def reset(self):
+        self.annotations_indexes_distanced_on = None
+        self.fiber_dists = None
         
-    def _create_new_array(a, b, chosen_value):
-        """
-        Given two numpy arrays `a` and `b` of equal length, create a new array of
-        equal length where if the value in `b` is less than or equal to the value in `a`,
-        then set it to the value in `b`. Else set it to a value of `chosen_value`.
-        """
-        new_array = np.zeros_like(a, dtype=int)
-        for i in range(len(a)):
-            if b[i] <= a[i]:
-                new_array[i] = b[i]
-            else:
-                new_array[i] = chosen_value
-        return new_array
-
-
+        self.bucketed_fibers = None
+        self.crunched_fibers = None
+        self.current_fibers = None
+        
+        self.list_of_zones = None
+        self.delete_zones = None
+        
+        self.combo_zones_numbers = {}
 
 @print_function_dec
 def get_all_fiber_dists_for_each_anno(fibers, centroids, annotations):
@@ -393,13 +396,13 @@ def get_bucket_for_each_fiber(fiber_dists, buckets=np.array([0, 50, 150], dtype=
     """Takes all distances for each fiber and anno, and gets a single bucket for each fiber that it falls into"""
     return np.digitize(np.min(fiber_dists, axis=1), buckets, right=True).astype(int)
 
-def get_crunched_fibers(fiber_dists, anno_indexes, buckets=np.array([0, 50, 150])):
-    all_bucketed_fibers = get_bucket_for_each_fiber(fiber_dists, buckets)
+def get_crunched_fibers(fiber_dists, anno_indexes, base_indexes, buckets=np.array([0, 50, 150]), to_ignore=[0,1]):
+    all_bucketed_fibers = get_bucket_for_each_fiber(fiber_dists[:, base_indexes], buckets)
     all_bucketed_fibers_of_selected_values = get_bucket_for_each_fiber(fiber_dists[:, anno_indexes], buckets)
-    final_crunched = _create_new_array(all_bucketed_fibers, all_bucketed_fibers_of_selected_values, len(buckets))
+    final_crunched = _create_new_array(all_bucketed_fibers, all_bucketed_fibers_of_selected_values, len(buckets), to_ignore)
     return final_crunched
     
-def _create_new_array(a, b, chosen_value):
+def _create_new_array(a, b, chosen_value, to_ignore):
     """
     Given two numpy arrays `a` and `b` of equal length, create a new array of
     equal length where if the value in `b` is less than or equal to the value in `a`,
@@ -410,10 +413,13 @@ def _create_new_array(a, b, chosen_value):
         if b[i] <= a[i]:
             new_array[i] = b[i]
         else:
-            new_array[i] = chosen_value
+            if(a[i] in to_ignore):
+                new_array[i] = chosen_value + 1
+            else:
+                new_array[i] = a[i]
+            #     chosen_value
+            # new_array[i] = chosen_value
     return new_array
-
-
 
 
 
@@ -433,6 +439,7 @@ def get_fiber_density_and_counts_per_zone(lengths, widths, fiber_dists_bucketed,
         #     final_counts[bucket] += prods[i]
     """
     final_counts = np.zeros(len(buckets) + 1) # Ex: [0, 0, 0, 0]
+    
     actual_counts = np.bincount(fiber_dists_bucketed, minlength=len(buckets) + 1).astype(int) # Represents number of fibers in each zone
     prods = lengths * widths 
     final_counts = np.bincount(fiber_dists_bucketed, weights=prods, minlength=len(buckets) + 1).astype(int) #represents sum of areas of fibers in each zone

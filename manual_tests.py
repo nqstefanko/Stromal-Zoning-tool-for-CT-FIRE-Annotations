@@ -34,7 +34,7 @@ CTF_OUTPUT = CTFIREOutputHelper(MAT_FILEPATH)
 DRAW_HELPER = DrawingHelper(TIF_FILEPATH)
 ANNOTATION_HELPER = AnnotationHelper(EXPORTED_ANNOTATION_FILEPATH, IMG_DIMS)
 PLOT_HELPER = PlottingHelper(tif_file=TIF_FILEPATH)
-VALUES = ["DCIS", "Epithelial", "Mid-Stromal", "Other Stromal"]
+VALUES = ["DCIS", "Epithelial", "Mid-Stromal", "Other Stromal", "OTHER"]
 
 plot_tests = True
 draw_tests = True
@@ -194,8 +194,9 @@ if draw_tests:
         DRAW_HELPER.draw_zones(zones, to_draw)
         DRAW_HELPER.save_file_overlay('images/coffee2.tif')
         
-    def test_draw_all_crunched_zone(zones=[0, 50, 150], indexes=[0]):
+    def test_draw_all_crunched_zone(zones=[0, 50, 150], indexes=[0,1]):
         zones = ANNOTATION_HELPER.get_zones_crunched(zones, indexes)
+        print(zones)
         DRAW_HELPER.draw_zones(zones)
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
     
@@ -332,7 +333,7 @@ if zone_tests:
             PLOT_HELPER.reset()
 
     ############## TEST Plotting/Drawing per zone  ########
-    test_draw_fibers_per_zone_single_zone()
+    # test_draw_fibers_per_zone_single_zone()
     # test_draw_fibers_per_zone_single_zone_only_dcis()
     # test_draw_fiber_per_zone_crunched()
     # test_plot_specific_zones()
@@ -439,13 +440,13 @@ if nums_tests:
     ############## TEST Signal_Densities and Averages per zone  ########
 
 if crunch_tests:
-    def test_basic_crunch_with_fibers(buckets=np.array([0, 50, 150], dtype=int), indexes=[0,1,2]):
+    def test_basic_crunch_with_fibers(buckets=np.array([0, 50, 150], dtype=int), indexes=[0,1]):
         crunched_union_zones = ANNOTATION_HELPER.get_zones_crunched(buckets, indexes)
         DRAW_HELPER.draw_zones(crunched_union_zones)
         fiber_dists = get_all_fiber_dists_for_each_anno(CTF_OUTPUT.fibers, CTF_OUTPUT.centroids, ANNOTATION_HELPER.annotations)    
 
         crunched_fibs = get_crunched_fibers(fiber_dists.astype(int), indexes, buckets=buckets)
-        DRAW_HELPER.draw_fibers_per_zone(CTF_OUTPUT.fibers, CTF_OUTPUT.fiber_widths, crunched_fibs, [0])
+        DRAW_HELPER.draw_fibers_per_zone(CTF_OUTPUT.fibers, CTF_OUTPUT.fiber_widths, crunched_fibs, [2])
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
         
         # Buckets
@@ -508,12 +509,41 @@ if crunch_tests:
         for i in range(4):
             cprint(f"{VALUES[i]} signal density: {'{0:.2%}'.format(zone_sums[i] / final_union_of_zones[i].area)}", 'yellow')
 
-    def test_get_signal_density_crunched_zone(buckets=np.array([0, 50, 150], dtype=int), indexes=[0,1,2]):
-        crunched_union_zones = ANNOTATION_HELPER.get_zones_crunched(buckets, indexes)
-        DRAW_HELPER.draw_zones(crunched_union_zones)
+    def test_crunch_plot_anno(zones=[0, 50, 150], annos=[0,1]):
+        cprint("\nPlotting all zones...", 'cyan')
+        # PLOT_HELPER._plot_annotations(ANNOTATION_HELPER.annotations, plot_anno_indexes=True)
+        list_of_union_zones, delete_zones = ANNOTATION_HELPER.get_zones_crunched_for_plotting(zones, annos, zones_to_ignore=[0,1])
+        PLOT_HELPER._plot_zones(list_of_union_zones)
+        PLOT_HELPER.show_plot()
+        PLOT_HELPER.reset()
+        
+        print(delete_zones.area)
+        plot_polygon(delete_zones, PLOT_HELPER.ax, add_points = False, fill=True, linewidth = 0, alpha=.55, color='red')
+        PLOT_HELPER.show_plot()
+        PLOT_HELPER.reset()
+    
+    def test_get_signal_density_crunched_zone(buckets=np.array([0, 50, 150], dtype=int), indexes=[0,1]):
+        to_ignore = [0,1,2]
+        crunched_union_zones, delete_zones = ANNOTATION_HELPER.get_zones_crunched(buckets, indexes, zones_to_ignore=to_ignore)
+        DRAW_HELPER.draw_zones(crunched_union_zones, delete_zones)
         fiber_dists = get_all_fiber_dists_for_each_anno(CTF_OUTPUT.fibers, CTF_OUTPUT.centroids, ANNOTATION_HELPER.annotations)    
 
-        crunched_fibs = get_crunched_fibers(fiber_dists.astype(int), indexes, buckets=buckets)
+        crunched_fibs = get_crunched_fibers(fiber_dists.astype(int), indexes, buckets=buckets, to_ignore=to_ignore)
+        DRAW_HELPER.draw_fibers_per_zone(CTF_OUTPUT.fibers, CTF_OUTPUT.fiber_widths, crunched_fibs, [0])  #Crunched or Bucketed
+        DRAW_HELPER.save_file_overlay('images/coffee.tif')
+
+        zone_sums, zone_counts = get_fiber_density_and_counts_per_zone(CTF_OUTPUT.get_fiber_lengths(), CTF_OUTPUT.fiber_widths, crunched_fibs)
+        print(zone_counts, crunched_union_zones[0].area)
+        cprint(f"Getting signal density for Zones: [0, 50, 150]", 'yellow')
+        for i in range(4):
+            cprint(f"{VALUES[i]} signal density: {'{0:.2%}'.format(zone_sums[i] / crunched_union_zones[i].area)}", 'yellow')
+
+    def test_get_signal_density_crunched_zone_with_new_base(buckets=np.array([0, 50, 150], dtype=int), indexes=[2], base_inds=[2,3]):
+        crunched_union_zones, del_zones = ANNOTATION_HELPER.get_zones_crunched(buckets, indexes, base_inds)
+        DRAW_HELPER.draw_zones(crunched_union_zones, del_zones)
+
+        fiber_dists = get_all_fiber_dists_for_each_anno(CTF_OUTPUT.fibers, CTF_OUTPUT.centroids, ANNOTATION_HELPER.annotations)    
+        crunched_fibs = get_crunched_fibers(fiber_dists.astype(int), indexes, base_inds, buckets=buckets)
         DRAW_HELPER.draw_fibers_per_zone(CTF_OUTPUT.fibers, CTF_OUTPUT.fiber_widths, crunched_fibs, [2])  #Crunched or Bucketed
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
 
@@ -522,14 +552,16 @@ if crunch_tests:
         cprint(f"Getting signal density for Zones: [0, 50, 150]", 'yellow')
         for i in range(4):
             cprint(f"{VALUES[i]} signal density: {'{0:.2%}'.format(zone_sums[i] / crunched_union_zones[i].area)}", 'yellow')
+    
+    def test_oppo_sigs_dens(buckets=np.array([0, 50, 150], dtype=int), indexes=[0,1]):
+        to_ignore = [0]
+        base_inds = ANNOTATION_HELPER.get_annotation_indexes()
+        crunched_union_zones, delete_zones = ANNOTATION_HELPER.get_zones_crunched(buckets, indexes, zones_to_ignore=to_ignore)
+        DRAW_HELPER.draw_zones(crunched_union_zones, delete_zones)
+        fiber_dists = get_all_fiber_dists_for_each_anno(CTF_OUTPUT.fibers, CTF_OUTPUT.centroids, ANNOTATION_HELPER.annotations)    
 
-    def test_get_signal_density_crunched_zone_with_new_base(buckets=np.array([0, 50, 150], dtype=int), indexes=[0]):
-        crunched_union_zones = ANNOTATION_HELPER.get_zones_crunched(buckets, indexes, [0,1])
-        DRAW_HELPER.draw_zones(crunched_union_zones)
-
-        fiber_dists = get_all_fiber_dists_for_each_anno(CTF_OUTPUT.fibers, CTF_OUTPUT.centroids, ANNOTATION_HELPER.annotations[0:2])    
-        crunched_fibs = get_crunched_fibers(fiber_dists.astype(int), indexes, buckets=buckets)
-        DRAW_HELPER.draw_fibers_per_zone(CTF_OUTPUT.fibers, CTF_OUTPUT.fiber_widths, crunched_fibs, [1])  #Crunched or Bucketed
+        crunched_fibs = get_crunched_fibers(fiber_dists.astype(int), indexes, base_inds, buckets=buckets, to_ignore=to_ignore)
+        DRAW_HELPER.draw_fibers_per_zone(CTF_OUTPUT.fibers, CTF_OUTPUT.fiber_widths, crunched_fibs, [4])  #Crunched or Bucketed
         DRAW_HELPER.save_file_overlay('images/coffee.tif')
 
         zone_sums, zone_counts = get_fiber_density_and_counts_per_zone(CTF_OUTPUT.get_fiber_lengths(), CTF_OUTPUT.fiber_widths, crunched_fibs)
@@ -537,14 +569,16 @@ if crunch_tests:
         cprint(f"Getting signal density for Zones: [0, 50, 150]", 'yellow')
         for i in range(4):
             cprint(f"{VALUES[i]} signal density: {'{0:.2%}'.format(zone_sums[i] / crunched_union_zones[i].area)}", 'yellow')
-    
+            
+
     # test_basic_crunch_with_fibers()
     # test_basic_crunch_with_new_base_fibers()
     # test_get_fiber_density_and_counts_per_zone_for_every_annotation()
     # test_get_signal_density_only_dcis()
+    test_crunch_plot_anno()
     # test_get_signal_density_crunched_zone()
     # test_get_signal_density_crunched_zone_with_new_base()
-
+    # test_oppo_sigs_dens()
 #  def test_get_signal_density_only_in_stromal_region_diff_zones():
 #         bucketed_fibers = bucket_the_fibers(CTF_OUTPUT.fibers, CTF_OUTPUT.centroids, ANNOTATION_HELPER.annotations)
 

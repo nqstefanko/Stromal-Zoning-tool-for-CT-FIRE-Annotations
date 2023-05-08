@@ -97,6 +97,8 @@ class MainFrame:
         
         # Frames
         self.fileselector_frame.pack(side=tk.TOP, padx=5, pady=5, fill=tk.BOTH)
+        
+        self.draw_fibers_colored_by_zone_bool = None
      
     def widgets_to_display_after_obj_set(self):
         #ZONES Entry
@@ -118,7 +120,7 @@ class MainFrame:
         
         self.draw_annotations_textbox = tk.Entry(self.frame)
         self.draw_annotations_textbox.grid(row=1, column=1, padx=5, pady=5)
-        self.draw_annotations_label = tk.Label(self.frame, text="- CSV Annotations to draw. Names or Indexes (Default: All)")
+        self.draw_annotations_label = tk.Label(self.frame, text="- CSV Annotations to draw. Names/Indexes (Default: All)")
         self.draw_annotations_label.grid(row=1, column=2, padx=5, pady=5, sticky="W")
 
         # Draw Fibers
@@ -134,7 +136,7 @@ class MainFrame:
         self.draw_zones_textbox = tk.Entry(self.frame)
         self.draw_zones_textbox.grid(row=3, column=1, padx=5, pady=5)
         
-        self.draw_zones_label = tk.Label(self.frame, text="- CSV values for zones to draw (Default: All)")
+        self.draw_zones_label = tk.Label(self.frame, text="- CSV Zones to draw. Integers - (Default: All)")
         self.draw_zones_label.grid(row=3, column=2, padx=5, pady=5, sticky="W")
 
         self.draw_zones_opacity_text = tk.StringVar()
@@ -146,15 +148,27 @@ class MainFrame:
         
         # Crunch Settings
         self.crunch_annotations_bool = tk.BooleanVar()
-        self.crunch_annotations_checkbox = tk.Checkbutton(self.frame, text="Crunch Annotations", variable=self.crunch_annotations_bool)
+        self.crunch_annotations_checkbox = tk.Checkbutton(self.frame, text="Crunch Annotations", variable=self.crunch_annotations_bool,
+                                                          command=self.toggle_crunch)
         self.crunch_annotations_checkbox.grid(row=4, column=0, padx=5, pady=5, sticky="W")
-        
+
         self.crunch_base_text = tk.StringVar()
         self.crunch_base_textbox = tk.Entry(self.frame, textvariable=self.crunch_base_text)
         self.crunch_base_textbox.grid(row=4, column=1, padx=5, pady=5, sticky="W")
 
-        self.crunch_base_description_label = tk.Label(self.frame, text="- CSV Base Annotations to crunch on. Names or Indexes (Default: All)")
+        self.crunch_base_description_label = tk.Label(self.frame, text="- CSV Annotations to crunch on. Names/Indexes (Default: All)")
         self.crunch_base_description_label.grid(row=4, column=2, padx=5, pady=5, sticky="W")
+        
+        self.crunch_ignore_text = tk.StringVar()
+        self.crunch_ignore_textbox = tk.Entry(self.frame, textvariable=self.crunch_ignore_text, width=10)
+        self.crunch_ignore_textbox.grid(row=4, column=3, padx=5, pady=5, sticky="W")
+        self.crunch_ignore_text.set('0,1')
+        
+        self.crunch_ignore_label = tk.Label(self.frame, text=" Zones Ignored")
+        self.crunch_ignore_label.grid(row=4, column=3, padx=5, pady=5, sticky="E")
+        
+        self.crunch_base_textbox.config(state='disabled')
+        self.crunch_ignore_textbox.config(state='disabled')
         
         # Fiber Distances
         self.distance_fibers_button = tk.Button(self.frame, bg='green', text='Get Fiber Distances', command=self.get_fiber_distances)
@@ -164,7 +178,7 @@ class MainFrame:
         self.distance_fibers_textbox = tk.Entry(self.frame, textvariable=self.distance_fibers_text)
         self.distance_fibers_textbox.grid(row=5, column=1, padx=5, pady=5, sticky="W")
 
-        self.distance_fibers_description_label = tk.Label(self.frame, text="- CSV Annotations to get distances on. Names or Indexes (Default: All)")
+        self.distance_fibers_description_label = tk.Label(self.frame, text="- CSV Annotations to get distances on. Names/Indexes (Default: All)")
         self.distance_fibers_description_label.grid(row=5, column=2, padx=5, pady=5, sticky="W")
 
         self.distance_fibers_label = tk.Label(self.frame, text="Fibers currently UNDISTANCED!", fg= "red")
@@ -191,7 +205,12 @@ class MainFrame:
         self.draw_fibers_textbox = tk.Entry(self.distance_frame)
         self.draw_fibers_textbox.grid(row=0, column=1, padx=5, pady=5)
         
-        # Calculate the averages button:
+        self.draw_fibers_colored_by_zone_bool = tk.BooleanVar()
+        self.draw_fibers_colored_by_zone_checkbox = tk.Checkbutton(self.distance_frame,
+                                                                   text="Draw Fibers Same Color as Zones",
+                                                                   variable=self.draw_fibers_colored_by_zone_bool)
+        self.draw_fibers_colored_by_zone_checkbox.grid(row=0, column=2, padx=5, pady=5, sticky="W")
+        
         self.get_averages_button = tk.Button(self.distance_frame, text='Calculate Averages', command=self.display_averages)
         self.get_averages_button.grid(row=2, padx=5, pady=5, sticky="W")
         
@@ -260,7 +279,7 @@ class MainFrame:
         self.frame.pack_forget()
         self.display_save_frame.pack_forget()
         self.distance_frame.pack_forget()
-        
+        self.draw_fibers_colored_by_zone_bool = None
         cprint("Clearing the object!", 'cyan')
 
     def get_zone_boundaries(self):
@@ -269,6 +288,14 @@ class MainFrame:
             zone_boundaries = self.split_string_to_ints(self.csv_boundaries_text.get())
         return zone_boundaries
     
+    def toggle_crunch(self):
+        if self.crunch_annotations_bool.get():
+            self.crunch_base_textbox.config(state='normal')
+            self.crunch_ignore_textbox.config(state='normal')
+        else:
+            self.crunch_base_textbox.config(state='disabled')
+            self.crunch_ignore_textbox.config(state='disabled')
+            
     def finalize_image(self):
         self.backend.DRAW_HELPER.reset()
     
@@ -283,6 +310,11 @@ class MainFrame:
                 self.backend.DRAW_HELPER.draw_annotations(self.backend.ANNOTATION_HELPER.annotations,
                                                           draw_anno_indexes=self.draw_annotations_info_var.get())
 
+        base_annotations_to_draw = []
+        if self.distance_fibers_text.get():
+            base_annotations_to_draw = [x.strip() for x in self.distance_fibers_text.get().split(',')]
+        base_anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(base_annotations_to_draw)
+
         # NOTE: Add feature to draw_fibers of specific colors per zone if dist_fibers
         if(self.draw_fibers_var.get()):
             verts = self.backend.CTF_OUTPUT.fibers
@@ -295,29 +327,31 @@ class MainFrame:
                     if self.crunch_base_text.get():
                         annotations_to_crunch_on = [x.strip() for x in self.crunch_base_text.get().split(',')]
                     crunch_anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(annotations_to_crunch_on)
-                    crunched_fibs = get_crunched_fibers(self.backend.fiber_dists, crunch_anno_indexes, buckets=zone_boundaries)
-                    self.backend.DRAW_HELPER.draw_fibers_per_zone(verts, widths, crunched_fibs, fiber_zones)
+                    ignore_zones = self.split_string_to_ints(self.crunch_ignore_text.get())
+
+                    crunched_fibs = get_crunched_fibers(self.backend.fiber_dists, crunch_anno_indexes, base_anno_indexes,
+                                                        buckets=zone_boundaries, to_ignore=ignore_zones)
+                    self.backend.DRAW_HELPER.draw_fibers_per_zone(verts, widths, crunched_fibs, fiber_zones,self.draw_fibers_colored_by_zone_bool.get())
                 else:
-                    bucketed_fibers = self.backend.get_bucket_for_each_fiber(zone_boundaries)
-                    self.backend.DRAW_HELPER.draw_fibers_per_zone(verts, widths, bucketed_fibers, fiber_zones)
+                    bucketed_fibers = self.backend.get_bucket_for_each_fiber(base_anno_indexes, zone_boundaries)
+                    self.backend.DRAW_HELPER.draw_fibers_per_zone(verts, widths, bucketed_fibers, fiber_zones,self.draw_fibers_colored_by_zone_bool.get())
             else:
-                self.backend.DRAW_HELPER.draw_fibers(verts, widths)
+                if(self.draw_fibers_colored_by_zone_bool and self.draw_fibers_colored_by_zone_bool.get()):
+                    self.backend.DRAW_HELPER.draw_fibers_colored_per_zone(verts, widths, self.backend.current_fibers)
+                else:
+                    self.backend.DRAW_HELPER.draw_fibers(verts, widths)
                 
         if(self.draw_zones_var.get()):
-            zone_boundaries = self.get_zone_boundaries()
-
-            base_annotations_to_draw = []
-            if self.distance_fibers_text.get():
-                base_annotations_to_draw = [x.strip() for x in self.distance_fibers_text.get().split(',')]
-            base_anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(base_annotations_to_draw)
-            
+            zone_boundaries = self.get_zone_boundaries()            
+            del_zones = None
             # Getting Normal Zones or Crunched Zones
             if(self.crunch_annotations_bool.get()):
                 annotations_to_crunch_on = []
                 if self.crunch_base_text.get():
                     annotations_to_crunch_on = [x.strip() for x in self.crunch_base_text.get().split(',')]
                 crunch_anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(annotations_to_crunch_on)
-                zones = self.backend.ANNOTATION_HELPER.get_zones_crunched(zone_boundaries, crunch_anno_indexes, base_anno_indexes)
+                ignore_zones = self.split_string_to_ints(self.crunch_ignore_text.get())
+                zones, del_zones = self.backend.ANNOTATION_HELPER.get_zones_crunched(zone_boundaries, crunch_anno_indexes, base_anno_indexes, ignore_zones)
             else:
                 zones = self.backend.ANNOTATION_HELPER.get_final_union_zones(zone_boundaries, base_anno_indexes)
 
@@ -342,7 +376,7 @@ class MainFrame:
             if(self.draw_zones_textbox.get()):
                 to_draw = self.split_string_to_ints(self.draw_zones_textbox.get())
             # self.backend.DRAW_HELPER.draw_zone_outlines(zones, to_draw=to_draw) #  to_draw=[1, 3]
-            self.backend.DRAW_HELPER.draw_zones(zones, to_draw=to_draw, opacity=opacity) #  to_draw=[1, 3]
+            self.backend.DRAW_HELPER.draw_zones(zones, del_zones, to_draw=to_draw, opacity=opacity) #  to_draw=[1, 3]
 
     def display_image(self):
         filename = self.img_fileselector.file_text.get()
@@ -362,7 +396,7 @@ class MainFrame:
 
     def save_image(self):
         filename = fd.asksaveasfilename(defaultextension=".tif",
-                                                filetypes=[("TIFF", "*.tif")])
+                                                filetypes=IMG_FILETYPES)
         if filename:
             self.finalize_image()
             self.backend.DRAW_HELPER.save_file_overlay(filename)
@@ -393,12 +427,12 @@ class MainFrame:
             annotations_to_draw = []
             if self.distance_fibers_text.get():
                 annotations_to_draw = [x.strip() for x in self.distance_fibers_text.get().split(',')]
-
             anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(annotations_to_draw)
-            annotations_to_use = self.backend.ANNOTATION_HELPER.get_annotations_from_indexes(anno_indexes)
 
+            self.backend.reset()
+            
             def distance_fibers():
-                self.backend.get_all_fiber_dists_for_each_anno(fibers, centroids, annotations_to_use)
+                self.backend.get_all_fiber_dists_for_each_anno(fibers, centroids, self.backend.ANNOTATION_HELPER.annotations)
                 self.backend.annotations_indexes_distanced_on = anno_indexes 
                 self.distance_fibers_label.config(text='Fibers are currently Distanced!', fg= "green")
                 self.widgets_to_display_after_distancing()
@@ -408,13 +442,20 @@ class MainFrame:
                     if self.crunch_base_text.get():
                         annotations_to_crunch_on = [x.strip() for x in self.crunch_base_text.get().split(',')]
                     crunch_anno_indexes = self.backend.ANNOTATION_HELPER.get_annotation_indexes(annotations_to_crunch_on)
-                    self.backend.current_fibers = get_crunched_fibers(self.backend.fiber_dists, crunch_anno_indexes, buckets=zone_boundaries)
-                    self.backend.list_of_zones = self.backend.ANNOTATION_HELPER.get_zones_crunched(
-                        zone_boundaries, crunch_anno_indexes, anno_indexes
+                    ignore_zones = self.split_string_to_ints(self.crunch_ignore_text.get())
+                    
+                    self.backend.current_fibers = get_crunched_fibers(self.backend.fiber_dists, crunch_anno_indexes,
+                                                                      anno_indexes, buckets=zone_boundaries,
+                                                                      to_ignore=ignore_zones)
+                    self.backend.list_of_zones, del_zones = self.backend.ANNOTATION_HELPER.get_zones_crunched(
+                        zone_boundaries, crunch_anno_indexes, anno_indexes, zones_to_ignore=ignore_zones
                     )
+                    self.backend.delete_zones = del_zones
                 else:
-                    self.backend.current_fibers = self.backend.get_bucket_for_each_fiber(zone_boundaries)
+                    self.backend.current_fibers = self.backend.get_bucket_for_each_fiber(anno_indexes, zone_boundaries)
                     self.backend.list_of_zones = self.backend.ANNOTATION_HELPER.get_final_union_zones(zone_boundaries, anno_indexes)
+                    self.backend.delete_zones = None
+                    
             threading.Thread(target=distance_fibers).start() 
 
     def display_averages(self):
@@ -467,12 +508,15 @@ class MainFrame:
         zone_boundaries = self.get_zone_boundaries()
         sig_dens, act_counts, zone_sums = self.calc_signal_densities()
         sig_dens_str = "\nSignal Densities:"
-        for i in range(len(zone_boundaries) + 1):
-            sig_dens_str+= f"\n\tZone {i}: signal density: {'{0:.2%}'.format(sig_dens[i])}"
+        for i, dens in enumerate(sig_dens):
+            sig_dens_str+= f"\n\tZone {i}: signal density: {'{0:.2%}'.format(dens)}"
+            
+        # for i in range(len(zone_boundaries) + 1):
+        #     sig_dens_str+= f"\n\tZone {i}: signal density: {'{0:.2%}'.format(sig_dens[i])}"
         msg_box.showinfo("Signal Density Info", sig_dens_str)
         sig_dens_str+=f"\n\tList Form: {sig_dens}"
-        sig_dens_str+=f"\n\tCounts per Zone: {act_counts}\n"
-        sig_dens_str+=f"\n\Sums per Zone: {zone_sums}\n"
+        sig_dens_str+=f"\n\tCounts per Zone: {act_counts}"
+        sig_dens_str+=f"\n\tSums per Zone: {zone_sums}\n"
         cprint(sig_dens_str, 'cyan')
 
     def calc_signal_densities(self):
@@ -481,10 +525,17 @@ class MainFrame:
         widths = self.backend.CTF_OUTPUT.fiber_widths
         
         zone_sums, zone_counts = get_fiber_density_and_counts_per_zone(lengths, widths, self.backend.current_fibers)
+        areas = []
         sig_dens = []
-        for i, zone_sum in enumerate(zone_sums):
-            sig_dens.append(zone_sum/self.backend.list_of_zones[i].area)
-            print(self.backend.list_of_zones[i].area)
+        for i, list_zone in enumerate(self.backend.list_of_zones):
+            print(i, list_zone.area)
+            sig_dens.append(zone_sums[i]/list_zone.area)
+            areas.append(list_zone.area)
+        if(self.backend.delete_zones):
+            print("Yes delete zones", self.backend.delete_zones.area)
+            sig_dens.append(zone_sums[-1]/self.backend.delete_zones.area)
+            areas.append(self.backend.delete_zones.area)
+        print(areas, sum(areas))
         return sig_dens, zone_counts, zone_sums
     
     def display_combination_signal_densities(self):
@@ -531,12 +582,12 @@ class MainFrame:
     def calc_sig_dens_per_anno(self):
         lengths = self.backend.CTF_OUTPUT.get_fiber_lengths()
         widths = self.backend.CTF_OUTPUT.fiber_widths
-        annotations_to_draw = []
-        if self.distance_fibers_text.get():
-            annotations_to_draw = [x.strip() for x in self.distance_fibers_text.get().split(',')]
-        annotations_to_use = self.backend.ANNOTATION_HELPER.get_annotations_from_indexes(annotations_to_draw)
+        # annotations_to_draw = []
+        # if self.distance_fibers_text.get():
+        #     annotations_to_draw = [x.strip() for x in self.distance_fibers_text.get().split(',')]
+        # annotations_to_use = self.backend.ANNOTATION_HELPER.get_annotations_from_indexes(annotations_to_draw)
         return get_signal_density_for_all_annotations(self.backend.fiber_dists, 
-                                                      annotations_to_use, lengths, widths)
+                                                      self.backend.ANNOTATION_HELPER.annotations, lengths, widths)
     
     def export_info(self):
         filename = fd.asksaveasfilename(defaultextension=".txt", filetypes=[("text", "*.txt")])
@@ -576,15 +627,17 @@ class MainFrame:
                     'Angles': list(ang_avgs.values()),
                 },
                 'Crunched': self.crunch_annotations_bool.get(),
-                'Annotations Crunched On': crunch_anno_indexes,
+                'Annotations Crunched On': self.crunch_base_text.get(),
+                'Annotations Indexes Crunched On': crunch_anno_indexes,
+                'Zones Ignored for Crunching': self.crunch_ignore_text.get(),
+                'Annotations Bucketed On': annotations_selected,
+                'Annotation Indexes Bucketed On': self.backend.annotations_indexes_distanced_on,
                 'Signal Densities per Annotation': list(self.calc_sig_dens_per_anno()),
                 'Signal Densities': sig_dens,
                 'Zone Sums': zone_sums,
                 'Zone Areas': zone_areas,
                 'Actual Counts': act_counts,
                 'Zones': self.get_zone_boundaries(),
-                'Annotations Bucketed On': annotations_selected,
-                'Annotation Indexes Bucketed On': self.backend.annotations_indexes_distanced_on,
                 'Combination Signal Densities': self.backend.combo_zones_numbers,
                 'GeoJson File': self.geojson_fileselector.file_text.get(),
                 'Mat File': self.mat_fileselector.file_text.get(),
@@ -610,7 +663,7 @@ class MainFrame:
                 if(isinstance(value, list)):
                     tsv_data += f"{key}\t" + "\t".join(map(str, value)) + "\n"
                 else:
-                    print(f"{key}\t{value}")
+                    # print(f"{key}\t{value}")
                     tsv_data += f"{key}\t{value}\n"
         tsv_data+='\n'
         with open(f"{os.path.splitext(filename)[0]}.tsv", 'w') as file:
@@ -620,7 +673,7 @@ class MainFrame:
         return str(list(dict.values())).replace(',',  '\t')
     
     def import_info(self):
-        print("Importing the info")
+        cprint("Importing the info!", 'magenta')
         filename = fd.askopenfilename(title='Open a file', filetypes=[('JSON files', '*.json')])
         if filename:
             self.import_text.set(filename)
@@ -636,24 +689,28 @@ class MainFrame:
                 self.widgets_to_display_after_obj_set()
                 cprint("All objects set!", "cyan")
                 
+                if('Zones' in data):
+                        self.csv_boundaries_text.set(str(data['Zones'])[1:-1])
+                    
+                if('Annotations Bucketed On' in data):
+                    anno_info = data['Annotations Bucketed On']
+                    if(anno_info != 'ALL'):
+                        self.distance_fibers_text.set(anno_info)
+                        
+                self.crunch_annotations_bool.set(data['Crunched'])
+                if('Annotations Crunched On' in data):
+                    self.crunch_base_text.set(data['Annotations Crunched On'])
+                    
+                if('Zones Ignored for Crunching' in data):
+                    self.crunch_ignore_text.set(data['Zones Ignored for Crunching']) 
+                    
+            
                 if os.path.isfile(f"{os.path.splitext(filename)[0]}.npy"):
                     self.backend.fiber_dists = np.load(f"{os.path.splitext(filename)[0]}.npy")
                     self.distance_fibers_label.config(text='Fibers currently DISTANCED!', fg= "green")
                     self.widgets_to_display_after_distancing()
                     
-                    if('Zones' in data):
-                        self.csv_boundaries_text.set(str(data['Zones'])[1:-1])
-                    
-                    if('Annotations Bucketed On' in data):
-                        anno_info = data['Annotations Bucketed On']
-                        if(anno_info != 'ALL'):
-                            self.distance_fibers_text.set(anno_info)
-                            
-                    self.crunch_annotations_bool.set(data['Crunched'])
-                    if('Annotations Crunched On' in data):
-                        self.crunch_base_text.set(data['Annotations Crunched On'])
-                    
-                    cprint("Distanced Fibers Loaded", "cyan")
+                cprint("Distanced Fibers Loaded", "cyan")
             
             else:
                 cprint("Not a valid json file to set object!", "red")

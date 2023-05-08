@@ -7,6 +7,7 @@ from termcolor import cprint, colored
 # Smallest zone 
 # if same zone counted twice.
 
+# When do analysis of DCIS, lesion individually rather than as whole image, only want ot look at peri-epithelial of the zones
 
 # Possibly make so you dont have to distance every single time man. Huge
 
@@ -19,6 +20,8 @@ distances_simulation = np.array([
 #Ann 0  1  2
     #Each col is bucketed  
 ])
+
+print(distances_simulation[:, [1,2]])
 
 fiber_buckets_simulation = np.array([
     [1, 0, 1], #Fiber

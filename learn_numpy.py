@@ -1,5 +1,85 @@
 import numpy as np
 from termcolor import cprint, colored
+
+#DCIS TO DCIS fall to closer one
+# If another lesion type, then priority type go to DCIS.
+# if in peri of dcis but in a equal to or father zone of non-dcis then count as peri of dcis. 
+# Smallest zone 
+# if same zone counted twice.
+
+# When do analysis of DCIS, lesion individually rather than as whole image, only want ot look at peri-epithelial of the zones
+
+# Possibly make so you dont have to distance every single time man. Huge
+
+distances_simulation = np.array([
+    [15, 151, 250], #Fiber
+    [149, 75, 74], #Fiber
+    [400, -1, 12], #Fiber
+    [153, 405, 405], #Fiber
+    [500, 800, -1], #Fiber
+#Ann 0  1  2
+    #Each col is bucketed  
+])
+
+print(distances_simulation[:, [1,2]])
+
+fiber_buckets_simulation = np.array([
+    [1, 0, 1], #Fiber
+    [1, 2, 2], #Fiber
+    [2, 2, 0], #Fiber
+    [0, 3, 3], #Fiber
+    [3, 3, 3], #Fiber
+#Ann 0  1  2
+    #Each col is bucketed
+])
+
+fiber_buckets_minned = np.min(fiber_buckets_simulation, axis=1).astype(int)
+widths_simulation = np.array([1,2,3,4,5])
+length_simulation = np.array([6,7,8,9,10])
+prods = widths_simulation * length_simulation
+buckets_simulation = np.array([0, 50, 150])
+
+final_counts = np.zeros(len(buckets_simulation) + 1, dtype=int)
+# Accumulate the counts for each fiber bucket
+# Create an array of indices into the final_counts array
+
+# Use NumPy's bincount function to accumulate the counts for each bucket
+counts = np.bincount(fiber_buckets_minned, weights=prods).astype(int)
+
+
+# Print the final counts array
+print(counts)
+# FINAL ANSWER SHOULD BE [66, 14, 0, 50]
+
+# print("EYO:")
+# print("argmin:",np.argmin(fiber_buckets_simulation, axis=1))
+# print("min:", fiber_buckets_simulation.min(axis=1))
+# print(np.where(np.isin(fiber_buckets_simulation.argmin(axis=1), [0, 2]))[0])
+# print(np.digitize(distances_simulation, np.array([0, 50, 150]), right=True).astype(int))
+# print("EYO:")
+
+# fibers_simulation = np.array([
+#     [1, 1, 1, 1],
+#     [2, 2, 2, 2],
+#     [3, 3, 3, 3],
+#     [4, 4, 4, 4],
+#     [5, 5, 5, 5],
+# ])
+
+# print(np.digitize(np.min(np.array([1, -1, 12, 12, -1, 2])), np.array([0, 50, 150]), right=True).astype(int))
+# print(np.argmin(np.array([1, -1, 12, 12, -1, 2])))
+
+
+
+# dists_digitized = np.digitize(distances_simulation, [0, 50, 150], right=True).astype(int)
+
+# cprint(f"Distances: \n{ distances_simulation}", 'cyan')
+# cprint(f"Distance Digitized: \n{dists_digitized}", 'green')
+# labled_fibers = dists_digitized.min(axis=1)
+# cprint(f"Labelzed Fibers: \n{labled_fibers}", 'cyan')
+# cprint(f"Bucket Digitized: \n{np.where(labled_fibers == 0)[0]}", 'green')
+
+
 # def mult()
 # test_arr = np.array(range(15)).reshape((3,5))
 # dists = np.ones((29))
@@ -18,32 +98,19 @@ from termcolor import cprint, colored
 
 # Would also like to calculate the collagen signal density in total stromal region and in specific stromal zones defined by distance
 # from the epithelial mask. Easy to use ImageJ for this but unsure if could do this analysis in the the zones.
-
-fiber_buckets_simulation = np.array([
-    [1, 0, 1], #Fiber
-    [1, 2, 2], #Fiber
-    [0, 2, 3], #Fiber
-    [0, 3, 3], #Fiber
-    [3, 3, 3], #Fiber
-#Ann 0  1  2
-    #Each col is bucketed
-])
-
-fibers_simulation = np.array([
-    [1, 1, 1, 1],
-    [2, 2, 2, 2],
-    [3, 3, 3, 3],
-    [4, 4, 4, 4],
-    [5, 5, 5, 5],
-])
-
-widths_simulation = np.array([4,5,6,7,8])
-length_simulation = np.array([1,2,3,4,5])
+# widths_simulation = np.array([4,5,6,7,8])
+# length_simulation = np.array([1,2,3,4,5])
 
 
-temp_test = np.array([0,2,3])
-temp_test2 = np.array([0, 10, 11, 4, 5, 12])
+# temp_test = np.array([0,2,3])
+# temp_test2 = np.array([0, 10, 11, 4, 5, 12])
 
+# single_dist_simulation = np.array([150, 10, 40, 50])
+
+# print(np.array([np.min(single_dist_simulation), np.argmin(single_dist_simulation)]))
+
+
+# print(np.digitize(134, np.array([0, 50, 150]), right=True)).astype(int)
 # x_simul = np.array([1,2,3,4,5])
 # y_simul = np.array([1,2,3,4,5])
 # print(np.vstack((x_simul, y_simul)).T)

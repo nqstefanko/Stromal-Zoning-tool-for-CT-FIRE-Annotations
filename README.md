@@ -105,7 +105,8 @@ python3 gui_boi.py
 
 ## Creating the Executable: 
 ```sh
-
+pip install pyinstaller
+pyinstaller gui_main.py --onefile
 ```
 
 # Changelog: 

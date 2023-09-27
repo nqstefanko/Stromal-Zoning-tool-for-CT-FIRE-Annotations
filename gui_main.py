@@ -211,8 +211,17 @@ class MainFrame:
                                                                    variable=self.draw_fibers_colored_by_zone_bool)
         self.draw_fibers_colored_by_zone_checkbox.grid(row=0, column=2, padx=5, pady=5, sticky="W")
         
-        self.get_averages_button = tk.Button(self.distance_frame, text='Calculate Averages', command=self.display_averages)
-        self.get_averages_button.grid(row=2, padx=5, pady=5, sticky="W")
+        self.get_averages_button = tk.Button(self.distance_frame, text='Calculate Averages',
+                                             command= lambda: self.display_stats(np.mean, 'Average'))
+        self.get_averages_button.grid(row=2, column=0, padx=5, pady=5, sticky="W")
+
+        self.get_medians_button = tk.Button(self.distance_frame, text='Calculate Medians',
+                                             command= lambda: self.display_stats(np.median, 'Median'))
+        self.get_medians_button.grid(row=2,  column=1, padx=5, pady=5, sticky="W")
+        
+        self.get_stddev_button = tk.Button(self.distance_frame, text='Calculate Std Dev',
+                                             command= lambda: self.display_stats(np.std, 'Std Dev'))
+        self.get_stddev_button.grid(row=2,  column=2, padx=5, pady=5, sticky="W")
         
         # Calculate the Signal Densities Button:
         self.get_signal_densities_button = tk.Button(self.distance_frame, text='Calculate Signal Densities', command=self.display_signal_densities)
@@ -458,51 +467,42 @@ class MainFrame:
                     
             threading.Thread(target=distance_fibers).start() 
 
-    def display_averages(self):
-        width_avgs, len_avgs, ang_avgs= self.calc_averages()
+    def display_stats_window(self, stats, stat_name, stat_type):
         zone_bound_len = len(self.get_zone_boundaries()) + 1
-        
-        width_avg_str = "Width Averages: \n"
+        stat_str = f"{stat_name} {stat_type}: \n"
         for i in range(zone_bound_len):
-            width_avg_str+=f"\t Zone {i} width averages: {width_avgs[i]}\n"
-        width_avg_str+=f"\t Total Average Width {np.mean(width_avgs[-1])}\n"
-        msg_box.showinfo("Width Info", width_avg_str)
-        width_avg_str+=f"\t List Form: {list(width_avgs.values())}\n"
+            stat_str+=f"\t Zone {i} {stat_name.lower()} {stat_type.lower()}: {stats[i]}\n"
+        stat_str+=f"\t Total {stat_type} {stat_name} {stats[-1]}\n"
+        msg_box.showinfo(f"{stat_name} Info", stat_str)
+        stat_str+=f"\t List Form: {list(stats.values())}\n"
+        return stat_str
         
-        len_avg_str = "Length Averages: \n"
-        for i in range(zone_bound_len):
-            len_avg_str+=f"\t Zone {i} length averages: {len_avgs[i]}\n"
-        len_avg_str+=f"\t Total Average Length {np.mean(len_avgs[-1])}\n"
-        msg_box.showinfo("Length Info", len_avg_str)
-        len_avg_str+=f"\t List Form: {list(len_avgs.values())}\n"
-        
-        ang_avg_str = "Angle Averages: \n"
-        for i in range(zone_bound_len):
-            ang_avg_str+=f"\t Zone {i} angle averages: {ang_avgs[i]}\n"
-        ang_avg_str+=f"\t Total Average Angle {np.mean(ang_avgs[-1])}\n"
-        msg_box.showinfo("Angle Info", ang_avg_str)
-        ang_avg_str+=f"\t List Form: {list(ang_avgs.values())}\n"
+    def display_stats(self, measurement, stat_type):
+        width_avgs, len_avgs, ang_avgs= self.calc_stats_for_collagen_feature(measurement)
+        width_avg_str = self.display_stats_window(width_avgs, 'Width', stat_type)
+        len_avg_str = self.display_stats_window(len_avgs, 'Length', stat_type)
+        ang_avg_str = self.display_stats_window(ang_avgs, 'Angle', stat_type)
         
         cprint(width_avg_str, 'yellow')
         cprint(len_avg_str, 'cyan')
         cprint(ang_avg_str, 'magenta')
     
-    def calc_averages(self):
+    def calc_stats_for_collagen_feature(self, measurement):
+        
         zone_bound_len = len(self.get_zone_boundaries()) + 1
-        
         widths = self.backend.CTF_OUTPUT.fiber_widths
-        width_avgs = get_average_value_per_zone(widths, self.backend.current_fibers, zone_bound_len)
-        width_avgs[-1] = np.mean(widths)
-        
         lengths = self.backend.CTF_OUTPUT.get_fiber_lengths()
-        len_avgs = get_average_value_per_zone(lengths, self.backend.current_fibers, zone_bound_len)
-        len_avgs[-1] = np.mean(lengths)
-        
         angles = self.backend.CTF_OUTPUT.fiber_angles
-        ang_avgs = get_average_value_per_zone(angles, self.backend.current_fibers, zone_bound_len)
-        ang_avgs[-1] = np.mean(angles)
         
-        return width_avgs, len_avgs, ang_avgs
+        width_measurements = get_measure_value_per_zone(widths, self.backend.current_fibers, measurement, zone_bound_len)
+        length_measurements = get_measure_value_per_zone(lengths, self.backend.current_fibers, measurement, zone_bound_len)
+        angle_measurements = get_measure_value_per_zone(angles, self.backend.current_fibers, measurement, zone_bound_len)
+        
+        width_measurements[-1] = measurement(widths) # Not a list, a dict. So creates -1 val for key to represent total
+        length_measurements[-1] = measurement(lengths)
+        angle_measurements[-1] = measurement(angles)
+        
+        return width_measurements, length_measurements, angle_measurements
 
     def display_signal_densities(self):
         zone_boundaries = self.get_zone_boundaries()
@@ -528,14 +528,11 @@ class MainFrame:
         areas = []
         sig_dens = []
         for i, list_zone in enumerate(self.backend.list_of_zones):
-            print(i, list_zone.area)
             sig_dens.append(zone_sums[i]/list_zone.area)
             areas.append(list_zone.area)
         if(self.backend.delete_zones):
-            print("Yes delete zones", self.backend.delete_zones.area)
             sig_dens.append(zone_sums[-1]/self.backend.delete_zones.area)
             areas.append(self.backend.delete_zones.area)
-        print(areas, sum(areas))
         return sig_dens, zone_counts, zone_sums
     
     def display_combination_signal_densities(self):
@@ -601,7 +598,9 @@ class MainFrame:
                 self.export_info_text.set(filename)    
                 np.save(f"{os.path.splitext(filename)[0]}.npy", self.backend.fiber_dists)
                     
-            width_avgs, len_avgs, ang_avgs = self.calc_averages()
+            width_avgs, len_avgs, ang_avgs = self.calc_stats_for_collagen_feature(np.mean)
+            width_meds, len_meds, ang_meds = self.calc_stats_for_collagen_feature(np.median)
+            width_stds, len_stds, ang_stds = self.calc_stats_for_collagen_feature(np.std)
             sig_dens, act_counts, zone_sums = self.calc_signal_densities()
             act_counts = [int(x) for x in act_counts]
             zone_sums = [int(x) for x in zone_sums]
@@ -626,6 +625,17 @@ class MainFrame:
                     'Lengths': list(len_avgs.values()),
                     'Angles': list(ang_avgs.values()),
                 },
+                'Medians': {
+                    'Widths': list(width_meds.values()),
+                    'Lengths': list(len_meds.values()),
+                    'Angles': list(ang_meds.values()),
+                },
+                'StdDevs': {
+                    'Widths': list(width_stds.values()),
+                    'Lengths': list(len_stds.values()),
+                    'Angles': list(ang_stds.values()),
+                },
+                
                 'Crunched': self.crunch_annotations_bool.get(),
                 'Annotations Crunched On': self.crunch_base_text.get(),
                 'Annotations Indexes Crunched On': crunch_anno_indexes,
@@ -663,7 +673,6 @@ class MainFrame:
                 if(isinstance(value, list)):
                     tsv_data += f"{key}\t" + "\t".join(map(str, value)) + "\n"
                 else:
-                    # print(f"{key}\t{value}")
                     tsv_data += f"{key}\t{value}\n"
         tsv_data+='\n'
         with open(f"{os.path.splitext(filename)[0]}.tsv", 'w') as file:
@@ -784,11 +793,9 @@ class ImageWindow:
 
 def main(): 
     root = Tk()
-    root.title("DCIS Helper")
+    root.title("DCIS Morphometric Pipeline Tool")
     root.geometry("1000x750")
 
-    # sv_ttk.set_theme("dark")
-    
     menu_window = MainFrame(root)
     root.mainloop()
     
@@ -796,4 +803,6 @@ if __name__ == '__main__':
     main()
 
 
+
+    # sv_ttk.set_theme("dark")
 

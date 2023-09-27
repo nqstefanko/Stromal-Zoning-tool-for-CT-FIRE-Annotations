@@ -39,7 +39,7 @@ class AnnotationHelper():
         self._load_annotations() # Will Set self.annotations
 
     def _load_annotations(self) -> None:
-        """  Gets Annotation Object in form of {colors, points} from exorted QuPath Annotations
+        """  Gets Annotation Object in form of {colors, points} from exported QuPath Annotations
             Input: None
             Returns: None
         """

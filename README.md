@@ -1,4 +1,4 @@
-# __DCIS Project__ _V 0.9_
+# __Stromal Zoning tool for CT-FIRE Annotations__ _V 0.9_
 ## Project Description: 
 This repo was built to help analyze DCIS samples with CTFire Results. 
 
@@ -7,7 +7,7 @@ __In order to run the GUI Application, simply run gui_main.exe which is found in
 
 ## Breakdown of GUI
 ### First Opening the Application
-![alt text](image_of_gui_beginning.png "Beginning Part of Gui")
+![alt text](explainer_images/image_of_gui_beginning.png "Beginning Part of Gui")
 
 When the GUI is first opened up you will see text boxes which show the 3 pieces needed to continue. You will require:
 1. __Upload Image__: An Image File that represents the tissue. Generally a .tif file. To confirm you selected the desired image, you can display the unedited image. 
@@ -23,7 +23,7 @@ Once the files are inputted, you can select the "Set Up Object" button. If you t
 Additionally, you can also optionally import an object/configuration. This will be explained in more detail exporting section below. In summary, you should select a json file that was generated form the export button. If you want the distanced fibers as well, then there should be a npy file in the same directory as the json file selected. The npy file will be generated if you click the "Compress Numpy Bucket Arr" checkbox when exporting.
 
 ### Once the Object is Set Up (Without Distancing)
-![alt text](image_of_gui_middle.png "Beginning and Middle Part of Gui")
+![alt text](explainer_images/image_of_gui_middle.png "Beginning and Middle Part of Gui")
 
 Once the Object is set up, you will given a new set of options:
 1. __CSV Boundaries of Zones__: This textbox represents the size (in pixels) of the desired zones. The zones reprsent how far from the annotation linings are from the epithelial edge. Zones are always represented by integers. This textbox, like all the others where you can input mulitple values, requires you to put in the number values in csv form like 0, number1, number2, number3 etc. The zones should be zero and positive and in ascending order like the default. (By default it is 0, 50, 150), so you dont need to type anything in. 
@@ -38,9 +38,9 @@ Once the Object is set up, you will given a new set of options:
     - The opacity affects the transparency of the inner parts of the zones (Not the lining). The values range from 0 (meaning completely transparent) to 256 (Solid Color). If value is not in that range it will either default to the closer one of those values. 
     NOTE: Make sure to read about distancing and crunching in relation to drawing zones. Here is what a basic example with zones looks like: 
     
-    ![alt text](zone_number_example.png "Title")
+    ![alt text](explainer_images/zone_number_example.png "Title")
 5. __Crunch Annotations Checkbox__: This checkbox allows you to "crunch" your annotation zones. Crunching the zones / annotations makes it so that the zones will be drawn in relation to the other annotations. This checkbox's functionality is best explained with the photo below: 
-    ![alt text](crunching_explained_p1.png "Title")
+    ![alt text](explainer_images/crunching_explained_p1.png "Title")
 
     Let's break down this photo and the images inside of it.
     - Image 1 (Farthest Left): This is the zones as they normally are not cruched. Notice how when two zones collide with eachother, they union with eachother as long as they are in the same zone. This photo means that we are not crunching (or we are crunching on all of the annotations). The annotation indexes go Top Left (0), Top Right (1), Bot Left (2), and Bot Right (3).
@@ -74,7 +74,7 @@ Once the Object is set up, you will given a new set of options:
 7. __Save the image__: Save image into a new tif file (tif, png, jpg). 
 
 ### Once the fibers are Bucketed
-![alt text](image_of_gui.png "Full Gui")
+![alt text](explainer_images/image_of_gui.png "Full Gui")
 
 Once the fibers are distanced, you will be given the new final set of options: 
 1. __CSV of Zones of Fibers to Draw__: This textbox represents the zones of the fibers you want to draw. If this textbox has the number values of the zones, then if the draw fibers checkbox is selected, instead of drawing all of the fibers, then only the fibers that fall into the specific zones you selected will be drawn. 
@@ -117,3 +117,4 @@ _V 0.9_ 5/8/23: Added Crunching Functionality, Changed bucketing to distancing, 
 # Upcoming Changes and Features:
 1. Significantly improve logging
 2. Use same functionality to address DCIS stiffness
+3. Color Picker for Zones

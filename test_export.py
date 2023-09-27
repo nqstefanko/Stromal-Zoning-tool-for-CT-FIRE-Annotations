@@ -33,9 +33,6 @@ import multiprocessing as mp #import Pool
 # TIF_FILEPATH = os.path.join(sys.path[0], "../Denoised_images/DCIS-018_10x10_1_Nuclei_Collagen - Denoised.tif")
 # MAT_FILEPATH = r"C:\Users\nqste\Code\UCSF\DCIS\DCIS_Collagen_Collaboration\DCIS_Collagen_Collaboration\Denoised_images\ctFIREout\ctFIREout_DCIS-018_10x10_1_Nuclei_Collagen - Denoised_s1.mat"
 
-# COLORS = ['green', 'magenta', 'red', 'yellow', 'cyan', 'white', 'blue', 'orange', 'pink', 'brown']
-# COLORS = [ 'cyan', 'white', 'blue','green','magenta']
-
 # with Image.open(TIF_FILEPATH) as img:
 #     IMG_DIMS = img.size
 
@@ -44,7 +41,20 @@ def sort_by_area(lst):
         return elem[0].area
     return sorted(lst, key=get_area, reverse=True)
 
-COLORS = ['green', 'magenta', 'yellow', 'red', 'cyan', 'white', 'blue', 'orange', 'pink', 'brown']
+COLORS = ['white', 'magenta', 'orange', 'green', 'cyan', 'red', 'blue', 'pink', 'yellow', 'brown']
+COLORS_HEX = [
+    '#FFFFFF',  # White
+    '#FF00FF',  # Magenta
+    '#FFA500',  # Orange
+    '#008000',  # Green
+    '#00FFFF',  # Cyan
+    '#FF0000',  # Pink
+    '#0000FF',  # Blue
+    '#FFC0CB',  # Pink
+    '#FFFF00',  # Yellow
+    '#713225'   # Brown
+]
+
 class DrawingHelper():
     def __init__(self, tif_file=None) -> None:
         self.tif_file = tif_file
@@ -138,12 +148,12 @@ class DrawingHelper():
         return rgbimg
 
     def draw_annotations(self, annos_to_draw, draw_anno_indexes=False):
-        font = ImageFont.truetype("arial.ttf", int(self.image.size[0] / 40))
+        font = ImageFont.truetype("arial.ttf", int(self.image.size[0] / 36))
         for annotation in annos_to_draw:
             poly = annotation.geo_polygon
             x, y = poly.exterior.xy
             flat_points2 = np.stack((x, y), axis=1).flatten()
-            self.draw_image.line(flat_points2.astype(np.float32), width=10, fill=tuple(annotation.color), joint='curve')
+            self.draw_image.line(flat_points2.astype(np.float32), width=15, fill=tuple(annotation.color), joint='curve')
 
             if draw_anno_indexes:
                 xcent = poly.centroid.coords.xy[0][0]
@@ -421,8 +431,6 @@ def _create_new_array(a, b, chosen_value, to_ignore):
             # new_array[i] = chosen_value
     return new_array
 
-
-
 def get_fiber_density_and_counts_per_zone(lengths, widths, fiber_dists_bucketed, buckets=np.array([0, 50, 150])):
     """Gets actual and sum counts of every fiber for every zone
         Inputs:
@@ -474,8 +482,15 @@ def get_signal_density_per_desired_zones(zone_sums, final_union_of_zones, zones)
     
     return final_density / final_area
 
-def get_average_value_per_zone(values, bucketed_fibers, num_of_zones = 4):
-    """This is used to calculate average length, width, and angle per zones"""
+def get_measure_value_per_zone(values, bucketed_fibers, measurement, num_of_zones=4):
+    """
+    # This is used to calculate values (mean, median, etc) from measurements of length, width, and angle per zones
+    Inputs: 
+        values:  measuresments to calculate - Ex: lengths, widths, angles
+        bucketed_fibers: Bucketed Fibers - Ex: output from get_bucket_for_each_fiber
+        measurement: Function to get measurements - Ex: np.mean, np.median, np.std
+        num_of_zones: Number of Zones - Ex: 4
+    """
     final_counts = {}
     for i in range(num_of_zones):
         final_counts[i] = 0
@@ -485,7 +500,7 @@ def get_average_value_per_zone(values, bucketed_fibers, num_of_zones = 4):
         if(not labeled_values.any()):
             value_mean = 0
         else:
-            value_mean = np.mean(labeled_values)
+            value_mean = measurement(labeled_values)
         final_counts[i] = value_mean
     return final_counts
 
@@ -493,168 +508,3 @@ if __name__ == '__main__':
     pass
 
 
-
-
-# @print_function_dec
-# def bucket_the_fibers(fibers, centroids, annotations, buckets=np.array([0, 50, 150])):
-#     """Buckets Each fiber into an annotation for every annotation"""
-#     # Return Arr (len fibers, len anno) - For each fibers, we have an array for each annotation with represented bucket.
-
-#     shape = (len(fibers), len(annotations))
-#     fibers_bucketed = np.ones(shape, dtype=int)
-#     fibers_length_with_anno = np.ones((len(fibers), 2), dtype=int)
-#     for i, centroid in enumerate(centroids):
-#         centroid_x = centroid[0]
-#         centroid_y = centroid[1]
-#         centroid_point = geo.Point(centroid_x, centroid_y)
-#         fiber_linestring = geo.LineString(fibers[i])
-
-#         poly_distances = np.array(range(len(annotations)))
-#         for j, annotation in enumerate(annotations):
-#             g_poly = annotation.geo_polygon
-#             poly_distances[j] = g_poly.exterior.distance(centroid_point)
-            
-#             if (g_poly.contains(centroid_point)):  # Could use fiber_linestring but much more restrictive  or g_poly.contains(fiber_linestring)
-#                 poly_distances[j] = -1
-
-#             if(fiber_linestring.crosses(g_poly)):
-#                 poly_distances[j] = 1
-        
-#         bucket_fibers = np.digitize(poly_distances, buckets, right=True).astype(int)
-#         fibers_bucketed[i] = bucket_fibers
-        
-#         fibers_length_with_anno[i] = np.array(
-#         [
-#             np.digitize(np.min(poly_distances), buckets, right=True).astype(int),
-#             np.argmin(poly_distances)
-#         ])
-        
-#     print(fibers_bucketed.shape, fibers_length_with_anno.shape)
-#     return fibers_bucketed, fibers_length_with_anno
-
-    # @print_function_dec
-    # def bucket_the_fibers(self, fibers, centroids, annotations, buckets=np.array([0, 50, 150])):
-    #     """Buckets Each fiber into an annotation for every annotation"""
-    #     # Return Arr (len fibers, len anno) - For each fibers, we have an array for each annotation with represented bucket.
-    #     shape = (len(fibers), len(annotations))
-    #     fibers_bucketed = np.ones(shape, dtype=int)
-    #     for i, centroid in enumerate(centroids):
-    #         centroid_x = centroid[0]
-    #         centroid_y = centroid[1]
-    #         centroid_point = geo.Point(centroid_x, centroid_y)
-    #         fiber_linestring = geo.LineString(fibers[i])
-
-    #         poly_distances = np.array(range(len(annotations)))
-    #         for j, annotation in enumerate(annotations):
-    #             g_poly = annotation.geo_polygon
-    #             poly_distances[j] = g_poly.exterior.distance(centroid_point)
-                
-    #             if (g_poly.contains(centroid_point) or g_poly.contains(fiber_linestring)):  # Could use fiber_linestring but much more restrictive
-    #                 poly_distances[j] = -1
-
-    #             if(fiber_linestring.crosses(g_poly)):
-    #                 poly_distances[j] = 1
-    #         bucket_fibers = np.digitize(poly_distances, buckets, right=True).astype(int)
-    #         fibers_bucketed[i] = bucket_fibers
-    #     self.bucketed_fibers = fibers_bucketed 
-    #     return fibers_bucketed
-    #     # return fibers_bucketed[0:len(centroids)]
-
-# def get_signal_density_per_annotation(bucketed_fibers_annotation_indexed, annotation, lengths, widths):
-    # fibs_inds_in_anno = np.where(bucketed_fibers_annotation_indexed == 0)
-    # length_of_fibs_in_anno = lengths[fibs_inds_in_anno]
-    # width_of_fibs_in_anno = widths[fibs_inds_in_anno]
-    # final_density = np.sum(length_of_fibs_in_anno * width_of_fibs_in_anno)
-    # return final_density / annotation.geo_polygon.area
-
-# def get_signal_density_for_all_annotations(bucketed_fibers, annotations, lengths, widths):
-#     all_signal_dens_per_annotations = np.zeros(len(annotations))
-#     for i, anno in enumerate(annotations):
-#         fibs_inds_in_anno = np.where(bucketed_fibers[:, i] == 0)
-#         length_of_fibs_in_anno = lengths[fibs_inds_in_anno]
-#         width_of_fibs_in_anno = widths[fibs_inds_in_anno]
-#         final_density = np.sum(length_of_fibs_in_anno * width_of_fibs_in_anno)
-#         all_signal_dens_per_annotations[i]  = final_density / anno.geo_polygon.area
-#     return all_signal_dens_per_annotations
-
-
-
-    # def draw_fibers_per_zone_crunched2(self, verts, widths, bucketed_fibers, annos=[21], to_draw=[0, 1, 2, 3]):
-    #     mask = (np.isin(bucketed_fibers[:, 0], to_draw),
-    #     np.isin(bucketed_fibers[:, 1], annos))  
-    #     indexes_to_plot = np.where(np.all(mask, axis=0))[0]
-    #     for i in indexes_to_plot:
-    #         self.draw_image.line(verts[i].flatten().astype(np.float32), width=int(round(widths[i])), fill=tuple(np.random.choice(range(256), size=3)), joint="curve")
-    #     self.image = Image.alpha_composite(self.image, self.rgbimg)
-        
-# def get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones):
-#     labeled_fibers = bucketed_fibers.min(axis=1)
-#     final_counts = {}
-#     actual_counts = {}
-#     for i in range(len_of_zones):
-#         actual_counts[i] = 0
-#         final_counts[i] = 0
-
-#     for i in range(len(bucketed_fibers)):
-#         final_counts[labeled_fibers[i]] +=  lengths[i] * widths[i]
-#         actual_counts[labeled_fibers[i]] +=  1
-#     return final_counts, actual_counts
-
-# def get_signal_density_per_zone(final_union_of_zones, final_counts):
-#     final_densities = []
-#     for i, zone in enumerate(final_union_of_zones):
-#         # print(f"Zone {len(final_union_of_zones) - i - 1}: {zone.area}")
-#         if(zone.area > 0):
-#             final_densities.append(final_counts[i] / zone.area)
-#         else:
-#             final_densities.append(0)
-
-#     return final_densities
-
-# def get_signal_density_overall(lengths, widths, final_union_of_zones,  bucketed_fibers):
-#     #FOR BUCKETED FIBERS:  0 is annotation, 1 is epith, 2 is mid, 3 is stromal
-#     len_of_zones = len(final_union_of_zones)
-#     final_counts, actual_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len_of_zones)
-#     return get_signal_density_per_zone(final_union_of_zones, final_counts), actual_counts
-
-
-        
-# def get_signal_density_per_desired_zones(lengths, widths, zone_sums, bucketed_fibers, zones):
-#     final_counts, actual_counts = get_fiber_area_per_zone(lengths, widths, bucketed_fibers, len(final_union_of_zones))
-#     final_area = 0
-#     final_density = 0
-    
-#     total_area = 0
-#     total_density = 0
-#     for i, zone in enumerate(final_union_of_zones):
-#         total_area += zone.area
-#         total_density += final_counts[i]
-        
-#         if(i in zones):
-#            final_area += zone.area
-#            final_density += final_counts[i]
-    
-#     return final_density / final_area
-
-
-
-
-# def draw_fibers_per_zone_crunched(self, verts, widths, bucketed_fibers, annos=[21], to_draw=[0, 1, 2, 3]):
-#     labeled_fibers = bucketed_fibers.argmin(axis=1)
-#     indexes_to_plot = np.where(np.isin(labeled_fibers, annos))[0]
-#     for i in indexes_to_plot:
-#         self.draw_image.line(verts[i].flatten().astype(np.float32), width=int(round(widths[i])), fill=tuple(np.random.choice(range(256), size=3)), joint="curve")
-#     self.image = Image.alpha_composite(self.image, self.rgbimg)
-
-    
-    
-#     @print_function_dec
-# def bucket_the_fibers2(centroids, fibers, annos_to_use, final_zones):
-#     """DONT USE! Buckets Each fiber into an annotation for every annotation"""
-#     # Return Arr (len fibers, len anno) - For each fibers, we have an array for each annotation with represented bucket.
-#     fibers_bucketed = np.zeros((len(fibers), len(annos_to_use)), dtype=int)
-#     for i, centroid in enumerate(centroids):
-#         centroid_point = geo.Point(centroid[0], centroid[1])
-#         in_zone = np.array([zone.contains(centroid_point) for zone in final_zones])
-#         fibers_bucketed[i] = np.argmax(in_zone)
-#     return fibers_bucketed
